@@ -1,0 +1,23 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+
+# Python
+__pycache__/
+*.pyc
+
+# TouchDesigner common backup/temp artifacts
+*.toe-backup
+*.tox-backup
+*.bak
+_Touchdesigner/Backup/
+_Touchdesigner/Information/
+_Touchdesigner/SLS_Studio.[0-9]*.toe
+
+# Local environment noise
+.env
+.venv/
+venv/
