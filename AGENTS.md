@@ -26,6 +26,8 @@ At the beginning of every new chat in this project:
   - `bitwig`
   - `devices`
   - `mcp_webserver_base`
+- Device-specific mapping conventions live in `_Touchdesigner/devices/DEVICE_RULES.md`.
+- Bitwig-specific conventions live in `_Touchdesigner/bitwig/BITWIG_RULES.md`.
 
 ## Working Rules
 - Keep documentation concise and current.
@@ -42,19 +44,32 @@ At the beginning of every new chat in this project:
 - `WORKLOG.md` should contain brief chronological notes, not long narratives.
 - Record verified system status when it materially changes.
 - Record open issues and next steps explicitly.
-- Documentation files in the DEV workspace should also be represented inside TouchDesigner as synced `textDAT` nodes when they are part of active project context.
-- Project documentation that should always be visible in TouchDesigner should live under `/project1` as file-synced `textDAT`s.
+- Documentation and rules files in the DEV workspace should always be represented inside TouchDesigner as synced `textDAT` nodes.
+- Project documentation and rules that should be visible in TouchDesigner must live under logical TouchDesigner areas as file-synced `textDAT`s.
 - Mirrored documentation nodes should be grouped in a dedicated logical area, not scattered across `/project1`.
+- When relevant project parts are added, removed, replaced, or significantly reorganized, ask whether `PROJECT_STATE.md` and `WORKLOG.md` should be updated.
+- When the active focus changes, ask whether `PROJECT_STATE.md` should be updated.
+- When durable project rules change, update `AGENTS.md`.
 
 ## TouchDesigner Notes
 - Check for TouchDesigner errors and warnings when validating the project state.
 - When reviewing device logic, inspect mappings, callbacks, lookup tables, and active MIDI I/O nodes.
 - Treat external files referenced by DATs as part of the project context.
 - Keep important DEV documentation mirrored in TouchDesigner so project context is available from both the filesystem and the TD network.
+- When working in `devices`, read `_Touchdesigner/devices/DEVICE_RULES.md` as the authoritative device-mapping reference.
+- When working in `bitwig`, read `_Touchdesigner/bitwig/BITWIG_RULES.md` as the authoritative Bitwig integration reference.
 - Prefer clear spatial organization in the TouchDesigner network:
   - group related nodes inside a dedicated COMP when appropriate
   - keep root-level layout readable
   - place documentation, support, and runtime areas in clearly separated regions
+- Rules `textDAT` nodes should appear at the beginning of a logical TouchDesigner area so they are immediately visible.
+- For TouchDesigner node layout, sort related blocks in this order when possible:
+  - Rules
+  - I/O
+  - Verarbeitung
+  - Bus
+  - Debug
+  - Tests
 
 ## Change Tracking
 - Use Git for real version history.
