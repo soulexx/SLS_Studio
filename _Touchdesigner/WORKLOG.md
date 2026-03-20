@@ -75,3 +75,7 @@
 - Restored the missing `/local/midi/device` rows for `BITWIG_CH2` to `BITWIG_CH6` (`id 12..16`) so the six Bitwig MIDI output blocks can send to their physical ports again.
 - Removed the stale second-stage `enc_*` / `btn_*` remap from `Midi_Bitwig_Ch1` to `Midi_Bitwig_Ch6` again and restored them to pure passthrough transport blocks for the already mapped `Group_MIDI_Map` output.
 - Rebound the six `Midi_Bitwig_Ch*` `midi_out` operators from the stale logical IDs `11..16` to the actual restored `/local/midi/device` row positions `3..8`, which map to `BITWIG_CH1..BITWIG_CH6`.
+- Removed the unused root `_tmp_*` scratch files that were left over from the earlier Bitwig and VCM-600 experiments.
+- Reconnected `/project1/Midi_Bitwig_Ch1/midi_out` from the temporary `direct_test` source back to `mapped_midi`.
+- Switched the six `Midi_Bitwig_Ch*` `midi_out` operators back to device IDs `11..16` after confirming the current Bome network resolves those ports directly again.
+- Verified that the current receive failure was caused by a `Bitwig MIDI Out -> Bitwig MIDI In` loop in the external Bome routing, not by the internal `vcm600 -> channel_selector -> Group_MIDI_Map -> Midi_Bitwig_Ch*` path.

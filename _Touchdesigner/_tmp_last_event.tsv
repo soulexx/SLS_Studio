@@ -1,9 +1,0 @@
-field	value
-device	vcm600
-etype	cc
-ch	1
-idx	24
-value	0.0
-topic	vcm600/channel/1/level
-label	Channel 1 Level
-group	channel_controls

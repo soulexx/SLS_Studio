@@ -25,7 +25,7 @@
 - Bitwig is reachable again on `127.0.0.1:8088` and TouchDesigner is listening on `9099`.
 - MIDI device `11` is currently connected to Bitwig MIDI In and is used for Bitwig control through MIDI mapping.
 - `/local/midi/device` again contains the fixed Bitwig output entries `11..16` as `BITWIG_CH1..BITWIG_CH6`, so the six `Midi_Bitwig_Ch*` output blocks can resolve their physical MIDI ports again.
-- The six `Midi_Bitwig_Ch*` `midi_out` operators are currently bound to the actual `/local/midi/device` row positions `3..8`, which correspond to the Bitwig ports `BITWIG_CH1..BITWIG_CH6` in the restored device table.
+- The six `Midi_Bitwig_Ch*` `midi_out` operators are currently bound directly to MIDI device IDs `11..16`.
 - `/project1/Midi_Bitwig_Ch1` now acts as the fixed group-1 Bitwig MIDI output block and targets MIDI device `11`.
 - `/project1/channel_selector/bitwig_midi_router` now reads the internal selector CHOP output and keeps fixed per-group activation for groups `1..6`.
 - The current fixed group mapping is:
@@ -58,7 +58,9 @@
 - Active hybrid slots now bootstrap from the current live group value when they still hold an uninitialized zero memory, so restored or newly added slots like `2.3` do not stay detached on `send_a`, `resonance`, or `frequency`.
 - `vcm600_callbacks` writes normalized input into the visible device tables and `/project1/eventbus`.
 - `/project1/Midi_Bitwig_Ch1` to `/project1/Midi_Bitwig_Ch6` again contain local `eventbus` / `eventbus_core` nodes so each output block can show the outgoing MIDI events in readable table form.
+- `/project1/Midi_Bitwig_Ch1/midi_out` is again fed from `mapped_midi` instead of the temporary `direct_test` source.
 - `/project1/Group_MIDI_Map` is again flattened to the lean core: direct `mapped_midi_1..6`, direct `out1..out6`, one combined `current_values_all`, and no inner `Group_1_MIDI_Map` to `Group_6_MIDI_Map` compatibility blocks.
+- The external MIDI routing is only stable when the Bome network stays linear as `TouchDesigner MIDI Out -> Bitwig MIDI In`; a `Bitwig MIDI Out -> Bitwig MIDI In` loop blocks the expected receive path.
 
 ## Open Items
 - Build `/project1/intent`.
