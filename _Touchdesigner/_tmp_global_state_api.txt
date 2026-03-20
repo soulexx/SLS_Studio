@@ -1,0 +1,67 @@
+"""Context store API for semantic interaction state."""
+
+STATE_PATH = '/project1/state/global_state'
+DEBUG_PATH = '/project1/state/global_state_debug'
+
+
+def _state_dat():
+    return op(STATE_PATH)
+
+
+def _debug_dat():
+    return op(DEBUG_PATH)
+
+
+def _set_debug_from_state(source='api'):
+    state = _state_dat()
+    debug = _debug_dat()
+    debug.clear()
+    debug.appendRow(['key', 'value', 'source'])
+    for row in range(1, state.numRows):
+        key = state[row, 0].val
+        value = state[row, 1].val
+        debug.appendRow([key, value, source])
+    return True
+
+
+def get_state():
+    state = _state_dat()
+    out = {}
+    for row in range(1, state.numRows):
+        out[state[row, 0].val] = state[row, 1].val
+    return out
+
+
+def get(key, default=''):
+    return get_state().get(key, default)
+
+
+def set(key, value, source='api'):
+    state = _state_dat()
+    for row in range(1, state.numRows):
+        if state[row, 0].val == key:
+            state[row, 1] = str(value)
+            _set_debug_from_state(source)
+            return True
+    state.appendRow([str(key), str(value), 'added by api'])
+    _set_debug_from_state(source)
+    return True
+
+
+def set_many(values, source='api'):
+    for key, value in values.items():
+        set(key, value, source)
+    _set_debug_from_state(source)
+    return True
+
+
+def reset_defaults():
+    state = _state_dat()
+    state.clear()
+    state.appendRow(['key', 'value', 'notes'])
+    state.appendRow(['mode', 'clip', 'semantic mode name'])
+    state.appendRow(['target', 'bitwig', 'target system'])
+    state.appendRow(['selection', 'track_1.1', 'selected object'])
+    state.appendRow(['page', 'launcher', 'active subpage'])
+    _set_debug_from_state('reset')
+    return True

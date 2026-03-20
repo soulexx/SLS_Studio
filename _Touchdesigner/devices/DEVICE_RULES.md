@@ -21,7 +21,9 @@ Speichern:
 
 Jeder Controller liegt in TouchDesigner unter:
 
-- `/project1/devices/<device>`
+- `/project1/<device>`
+
+Alle aktiven Device-COMPs liegen direkt auf `/project1` und werden dort als gemeinsamer sichtbarer Bereich angeordnet.
 
 Typische Nodes pro Geraet:
 

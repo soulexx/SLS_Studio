@@ -52,5 +52,5 @@
   - the other direction = `1`
 
 ## Test Area
-- CNTRLR LED test helpers live in `/project1/devices/cntrlr`.
+- CNTRLR LED test helpers live in `/project1/cntrlr`.
 - `cntrlr_led_test_api` is a test-only tool, not the future production LED adapter.

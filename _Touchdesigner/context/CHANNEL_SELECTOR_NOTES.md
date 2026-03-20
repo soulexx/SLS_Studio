@@ -1,4 +1,11 @@
 Channel selection logic.
 
-Reads normalized channel events from the eventbus and updates shared channel truth in `/project1/state/channel_state`.
-The feature sets one `focused_channel` and maintains explicit `channel_n_enabled` flags for the enabled set.
+Reads selector button events and updates shared selector truth in `/project1/state/channel_selector_state`.
+
+Behavior
+- `cf_asn` toggles `track_x.1`
+- `clip` toggles `track_x.2`
+- `track` toggles `track_x.3`
+- all 18 slots are independent toggles
+- no per-group exclusivity
+- no single-focus replacement logic

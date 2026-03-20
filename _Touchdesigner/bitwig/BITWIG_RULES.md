@@ -28,6 +28,7 @@ Wichtige bekannte Komponenten:
 
 - `/project1/bitwig/bitwigMain`
 - `/project1/bitwig/bitwigMain/bitwigMain`
+- `/project1/bitwig/bitwigTrack/bitwigTrack`
 
 ## Verbindungsregeln
 
@@ -50,9 +51,16 @@ Wenn sich diese Daten aendern:
 ## Arbeitsregeln
 
 - Bei Arbeiten an der Bitwig-Integration zuerst die zentrale Konfiguration in `/project1/bitwig/bitwigMain/bitwigMain` pruefen.
+- Fuer Track-Auswahl aus dem Projektkontext den bestehenden Cursor in `/project1/bitwig/bitwigTrack/bitwigTrack` bevorzugen.
 - Vor strukturellen Aenderungen an Bitwig-Komponenten bestehende OSC-, AsyncIO- und Callback-Pfade pruefen.
 - Live-Test hat Vorrang vor Annahmen.
 - Wenn keine Live-Daten sichtbar sind, zwischen Struktur korrekt und Verbindung verifiziert unterscheiden.
+
+## Track Selection
+
+- Die semantische Auswahl lebt in `/project1/state/channel_state`.
+- Bitwig-spezifische Aufloesung von `track_x.y` auf lineare Track-Indizes lebt in `/project1/outputs/bitwig_channel_selection/bitwig_track_map`.
+- Der Output bewegt den bestehenden `bitwigTrack`-Cursor ueber dessen Track-Navigation statt eigene Sonderpfade direkt auf der Feature-Ebene zu bauen.
 
 ## Debug-Regeln
 

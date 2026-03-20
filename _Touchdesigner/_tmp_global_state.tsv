@@ -1,0 +1,5 @@
+key	value	notes
+mode	fx	semantic mode name
+target	bitwig	target system
+page	launcher	active subpage
+channel_selector_active	1	feature enabled flag
