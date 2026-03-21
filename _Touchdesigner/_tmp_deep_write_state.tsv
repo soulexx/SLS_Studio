@@ -1,0 +1,6 @@
+field	value
+group	2
+focus	send_b
+write_status	held
+targets_written	1
+target_paths	/project1/bitwigRemotesTrack2_2

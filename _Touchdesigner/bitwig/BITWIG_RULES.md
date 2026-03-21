@@ -26,9 +26,10 @@ Bitwig liegt in TouchDesigner aktuell unter:
 
 Wichtige bekannte Komponenten:
 
-- `/project1/bitwig/bitwigMain`
-- `/project1/bitwig/bitwigMain/bitwigMain`
 - `/project1/bitwig/bitwigTrack/bitwigTrack`
+- `/project1/bitwig/group_tracks/group_track_1` bis `group_track_6`
+- `/project1/bitwig/DEMO1/project1/bitwigMain`
+- `/project1/bitwig/DEMO1/project1/projectRemotesMacros1`
 
 ## Verbindungsregeln
 
@@ -50,17 +51,21 @@ Wenn sich diese Daten aendern:
 
 ## Arbeitsregeln
 
-- Bei Arbeiten an der Bitwig-Integration zuerst die zentrale Konfiguration in `/project1/bitwig/bitwigMain/bitwigMain` pruefen.
-- Fuer Track-Auswahl aus dem Projektkontext den bestehenden Cursor in `/project1/bitwig/bitwigTrack/bitwigTrack` bevorzugen.
+- Bei Arbeiten an der Bitwig-Integration zuerst die zentrale Konfiguration in `/project1/bitwig/DEMO1/project1/bitwigMain` pruefen.
+- Fuer track-bezogene tdBitwig-Steuerung den bestehenden Cursor in `/project1/bitwig/bitwigTrack/bitwigTrack` oder die festen `/project1/bitwig/group_tracks/group_track_*` bevorzugen.
+- Fuer 8er-Deep-Parameterbaenke den bestehenden tdBitwig-Remote-Block `/project1/bitwig/DEMO1/project1/projectRemotesMacros1` bevorzugen, bevor ein neuer eigener Remote-Comp gebaut wird.
 - Vor strukturellen Aenderungen an Bitwig-Komponenten bestehende OSC-, AsyncIO- und Callback-Pfade pruefen.
 - Live-Test hat Vorrang vor Annahmen.
 - Wenn keine Live-Daten sichtbar sind, zwischen Struktur korrekt und Verbindung verifiziert unterscheiden.
 
-## Track Selection
+## Deep Mapping
 
-- Die semantische Auswahl lebt in `/project1/state/channel_state`.
-- Bitwig-spezifische Aufloesung von `track_x.y` auf lineare Track-Indizes lebt in `/project1/outputs/bitwig_channel_selection/bitwig_track_map`.
-- Der Output bewegt den bestehenden `bitwigTrack`-Cursor ueber dessen Track-Navigation statt eigene Sonderpfade direkt auf der Feature-Ebene zu bauen.
+- Der sichtbare tdBitwig-Deep-Pfad liegt jetzt auf Root als `vcm600 -> Instrument_Control_Core -> bitwigRemotesTrackx_y`; die Hilfslogik fuer Fokus, `fx_grid` und Subbank-Mapping sitzt dabei intern im `Instrument_Control_Core`.
+- `/project1/Instrument_Control_Core/fx_subbank_map` liefert fuer den Deep-Pfad semantische `deep_1..8`-Kanaele plus Metadaten (`deep_slot_active`, `deep_focus_valid`, `deep_bank_id`, `deep_page_index`).
+- `/project1/Instrument_Control_Core/deep_bus` ist jetzt der zentrale Deep-Ausgang fuer den aktuell fokussierten Kanal; die gruppierten `bitwigRemotesTrackx_y`-Ziele bleiben dabei vorerst ein experimenteller Ziel-Layer und sind noch keine verifizierte feste `x.y`-Adressierung.
+- Die rohen acht VCM-600-Deep-Fader werden im `Instrument_Control_Core` als `fx_grid_1 .. fx_grid_8` angezeigt und lesen direkt aus dem internen `fx_grid`-Router, nicht aus dem bereits gegateten Deep-Bus.
+- Aktuell sind direkte `Remotecontrol0..7`-Schreibzugriffe live verifiziert.
+- Remote-Page-Umschaltung ist strukturell vorbereitet, aber noch nicht live verifiziert, solange `projectRemotesMacros1` keine belegten `PageNames` meldet.
 
 ## Debug-Regeln
 

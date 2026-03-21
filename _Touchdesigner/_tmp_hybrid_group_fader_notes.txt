@@ -1,0 +1,1 @@
+Reusable hybrid group fader block for three active subslots with anchored offset in the middle and elastic sync at 0/1.

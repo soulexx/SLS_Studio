@@ -26,11 +26,12 @@ TouchDesigner runtime centers around `/project1` with these main areas:
 - `/project1/cntrlr`
 - `/project1/midicon`
 - `/project1/midicraft`
-- `/project1/eventbus`
-- `/project1/state`
-- `/project1/modes`
-- `/project1/features`
-- `/project1/intent`
+- `/project1/channel_selector`
+- `/project1/Instrument_Control_Core`
+- `/project1/gummiband_master`
+- `/project1/Midi_Bitwig_Ch1` to `/project1/Midi_Bitwig_Ch6`
+- `/project1/bitwigRemotesTrack1_1` to `/project1/bitwigRemotesTrack6_3`
+- `/project1/mcp_webserver_base`
 
 Active devices now live directly on `/project1` and should stay grouped as one visible network area.
 
@@ -66,21 +67,19 @@ Active devices now live directly on `/project1` and should stay grouped as one v
 - When devices are shown on root, keep them inside one visible annotation area so the hardware side reads like one connected playground.
 
 ## Current Interaction Architecture
-- `devices` handles hardware I/O, mapping, and local LED tests.
-- `eventbus` collects normalized shared events.
-- `state` holds shared semantic truth such as active mode, page, target, and reusable selections.
-- `modes` defines how features behave or are bound in different situations.
-- `features` contains visible functional building blocks that read events and mutate or consume shared truth.
-- `outputs` contains downstream consumers that read shared truth and drive external targets.
-- `intent` should turn event plus context into user intent.
-- `debug` holds testing and visibility tools.
-- Prefer visible root-level main flow as `device -> feature -> state/output` through CHOP connections when the relationship should read like a TouchDesigner patch.
-- Keep DAT tables, event logs, and Python-driven translation inside the block unless they are part of the root-level story.
+- `vcm600`, `cntrlr`, `midicon`, and `midicraft` handle hardware I/O and local device debug.
+- `channel_selector` owns selector truth and routing for `track_x.y` activation.
+- `Instrument_Control_Core` owns shared slot value memory, pickup state, hybrid encoder behavior, and the central per-group instrument control translation.
+- `gummiband_master` owns the reusable elastic multi-slot movement algorithm; state stays in `Instrument_Control_Core`.
+- `Midi_Bitwig_Ch1` to `Midi_Bitwig_Ch6` are the fixed MIDI transport outputs for Bitwig groups `1..6`.
+- Prefer the visible root-level main flow `device -> channel_selector -> Instrument_Control_Core -> Midi_Bitwig_Ch*`.
+- Keep temporary helper routers for deep/fx logic inside `Instrument_Control_Core` instead of leaving them loose on root once the wiring is verified.
+- Keep DAT tables, event logs, and Python-driven translation inside the block unless they are part of the visible root-level story.
 
 ## State Rule
-- Use `eventbus` for transient events.
-- Use `state` for current truth.
-- If a feature-owned value is read by other blocks, move that value into `state` and mirror it locally only for visibility.
+- Keep selector-owned truth inside `channel_selector`.
+- Keep mapping-, pickup-, and hybrid-owned truth inside `Instrument_Control_Core`.
+- Only add new root-level shared state if multiple independent blocks truly need the same semantic truth.
 
 ## LED Architecture Rule
 - LED output should be state-driven, not event-driven.
