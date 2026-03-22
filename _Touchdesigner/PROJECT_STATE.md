@@ -54,6 +54,8 @@
 - `/project1/bitwigMain` now exists directly on root as the shared live tdBitwig core for deep mapping.
 - `/project1/bitwigMain/out1` currently reports `connected = 1`, so the tdBitwig core is live again.
 - The tdBitwig target side now sits directly on root as `bitwigRemotesTrack1_1 .. bitwigRemotesTrack6_3`; the earlier grouped `CH_x_Instruments` and `CH_x_Deep` presentation is no longer part of the active runtime root.
+- The `bitwigRemotesTrack1_1 .. bitwigRemotesTrack6_3` layer is now treated explicitly as `18` fixed Bitwig target slots, not as a reliable dynamically retargetable `Track x.y` layer; selector/core activation decides which of those fixed targets receive writes.
+- `/project1/bitwigTrack` now exists again on root as the reusable tdBitwig track template, and `/project1/bitwigTrack1 .. /project1/bitwigTrack6` now exist again as a restored visible root row for the six `live ch 1 .. 6` track cursors.
 - The active deep writer now lives inside `/project1/Instrument_Control_Core` as a central writer path that pushes `deep_1..8` to all active `bitwigRemotesTrack{group}_{slot}` targets of the focused group.
 - `fx_subbank_map/subbank_map` now defines semantic page targets instead of MIDI CC banks:
   - `hi_eq -> page 0`
@@ -103,6 +105,7 @@
 - `/project1/channel_selector/event_stream_exec` now snapshots the current `fx_grid` values into that per-slot memory before a selector button deactivates an already active slot.
 - `/project1/Instrument_Control_Core/deep_write_callbacks` now also writes the current focused `deep_1 .. deep_8` payload into the matching per-slot `fx_grid_memory` rows for every active target that receives a deep write.
 - `/project1/Instrument_Control_Core/current_values_all` now shows live `fx_grid_*` values for active slots in the focused group and falls back to the stored per-slot `fx_grid_memory` values for inactive slots.
+- `/project1/Instrument_Control_Core/fx_grid_router/out1` is now reconnected to the internal `fx_grid_out` stream again, so `fx_grid` reaches `fx_subbank_map`, `deep_bus`, `fx_grid_memory`, and `current_values_all` in real time without requiring a selector re-toggle.
 - `/project1/Instrument_Control_Core/deep_write_state` now shows the central tdBitwig deep-writer status (`group`, `focus`, `write_status`, `targets_written`, `target_paths`) inside the core.
 - `/project1/Instrument_Control_Core/hybrid_group_fader` now exists as a reusable internal block for relative multi-slot fader movement with synced travel to `0` or `1` at the limits.
 - `/project1/gummiband_master/gummiband_core` now contains the extracted reusable elastic multi-slot movement algorithm; `channel_selector/event_stream_exec` calls that root master for `hi_eq .. frequency`, while state and anchors remain in `Instrument_Control_Core`.

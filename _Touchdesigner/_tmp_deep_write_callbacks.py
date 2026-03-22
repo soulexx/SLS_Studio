@@ -7,6 +7,19 @@ GUMMIBAND_CORE_PATH = '/project1/gummiband_master/gummiband_core'
 EPSILON = 0.0001
 
 
+def _normalize_unit(value):
+    try:
+        value = float(value)
+    except Exception:
+        return value
+    value = max(0.0, min(1.0, value))
+    if abs(value) <= EPSILON:
+        return 0.0
+    if abs(1.0 - value) <= EPSILON:
+        return 1.0
+    return value
+
+
 def _state_value(key, default=''):
     table = op(STATE_PATH)
     if not table:
@@ -53,7 +66,7 @@ def _target(group, slot):
 
 def _format_number(value):
     try:
-        value = float(value)
+        value = _normalize_unit(value)
     except Exception:
         return str(value)
     if abs(value - round(value)) < 1e-6:
@@ -109,7 +122,7 @@ def _write_fx_grid_memory(group, slot, deep_values):
     for row in range(1, table.numRows):
         if table[row, 1].val == str(group) and table[row, 2].val == str(slot):
             for offset, value in enumerate(deep_values, start=3):
-                table[row, offset] = str(value)
+                table[row, offset] = _format_number(value)
             return
 
 
@@ -186,9 +199,10 @@ def _fx_grid_outputs(group, label, live, active_slots):
         start_fader = live
     if len(active_slots) == 1:
         outs = list(bases)
-        outs[active_slots[0] - 1] = max(0.0, min(1.0, float(live)))
+        outs[active_slots[0] - 1] = _normalize_unit(live)
     else:
         outs = _apply_gummiband(bases, active_slots, start_fader, live)
+    outs = [_normalize_unit(v) for v in outs]
     table[row, 2] = mask
     for slot in (1, 2, 3):
         table[row, 6 + slot] = _format_number(outs[slot - 1])

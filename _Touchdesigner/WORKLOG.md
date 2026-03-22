@@ -1,5 +1,10 @@
 # Worklog
 
+## 2026-03-22
+- Reconnected `/project1/Instrument_Control_Core/fx_grid_router/out1` to `fx_grid_out` so the internal deep path again forwards live `fx_grid 1..8` values into `fx_subbank_map`, `deep_bus`, slot memory, and the `current_values_all` overview without requiring selector re-toggle.
+- Restored the root tdBitwig track template `/project1/bitwigTrack` into a visible root row `/project1/bitwigTrack1 .. /project1/bitwigTrack6` and set those six track cursors to `live ch 1 .. 6`.
+- Marked `/project1/bitwigRemotesTrack1_1 .. /project1/bitwigRemotesTrack6_3` as fixed target slots with visible comments and a `project_docs/bitwig_remote_target_rules` note so the layer is no longer treated as a reliable dynamic track-retarget system.
+
 ## 2026-03-15
 - Organized `/project1` into `devices`, `eventbus`, `context`, `intent`, `adapters`, and `debug`.
 - Rebuilt shared eventbus and reconnected `vcm600` and `cntrlr`.
