@@ -133,3 +133,53 @@
 - Renamed the raw eight deep-fader rows in `/project1/Instrument_Control_Core/current_values_all` to `fx_grid_1 .. fx_grid_8` and changed them to read directly from the raw internal `fx_grid` source instead of the gated deep bus.
 - Removed the loose root helper blocks `fx_grid_router`, `fx_grid_router1`, and `fx_subbank_map` after copying and rewiring them inside `/project1/Instrument_Control_Core` as internal helper blocks.
 - Added a central `/project1/Instrument_Control_Core/deep_write_callbacks` + `deep_write_state` path so the core now writes the focused group's deep values directly to the active root `bitwigRemotesTrack{group}_{slot}` targets.
+
+## Session 2026-03-27 — Bitwig-Routing, Selection-Fix, Performance, Doku
+
+### Multi-Channel Fader Jitter (Root Fix)
+- `vcm600_callbacks.onReceiveMIDI`: CC-Events rufen `write_exec.refresh()` direkt auf (kein `_set_current_bus_event`) — eliminiert inDAT-Latenz für parallele Faderbewegungen
+- Note-Events gehen weiterhin auf `_set_current_bus_event` für den Bus + direkt auf `event_in_exec.process()`
+
+### CH_N Spalten in ICC-Tabelle
+- `current_values_all_core`: HEADER erweitert um `CH_1..CH_6` (je nach Gruppe: live-Wert wenn kein Slot aktiv, sonst unverändert)
+- `write_exec._write_direct()`: schreibt CH_N bei no-slot-Pfad mit live-Wert, bei Slot-Pfaden kein Überschreiben (kein Sprung auf 0)
+
+### Bitwig Remote Controls Routing
+- `_write_bitwig_remotes()` in write_exec: eq_hi/mid/low, pan, send_a/b, resonance, frequency → bitwigRemotesTrack{N}.Remotecontrol0..7
+- Kein Slot: CH_N → bitwigRemotesTrackN / Slot aktiv: N.s → bitwigRemotesTrackN_s
+- Kein CH_N=0 mehr beim Slot-Aktivieren (verhindert Sprünge in Bitwig)
+
+### FX Sends Routing  
+- fx_grid_1..8 → bitwigTrack{focus_ch}.Send0..7
+- Bedingung: focus_ch gesetzt UND kein Slot aktiv für focus_ch
+- Check: selector_in wird inline in _write_bitwig_remotes gelesen
+
+### Focus Tracking / Make Visible
+- `_update_focus(group)` in write_exec: schreibt focus_ch in focus_state, pulst bitwigTrackN.Makevisibleinmixer nur bei echtem Kanalwechsel
+- Level-Fader triggert _update_focus(group) für ch1-6
+- master_level triggert _update_focus('master') → bitwigTrackMaster
+
+### Master Volume
+- vcm600/global/master_level → bitwigTrackMaster.par.Volume (immer, in _write_bitwig_remotes)
+
+### VCM600 Map Fix
+- scene_push idx 86→87, foot_switch idx 87→88 (Kollision behoben)
+
+### Channel Selector State Machine (Neuaufbau)
+- selection_core: Normal-Mode (live replace on first press, live add during anchor hold, release ends session only)
+- Shift-Mode (live toggle auf bestehender Auswahl)
+- event_in_exec ruft selection_core.module.handle_event() direkt auf (kein inDAT single-event loss)
+- scene_push press/release clearst immer Session (verhindert orphaned sessions)
+- Neue DATs: modifier_state, selection_session, session_members
+
+### Numerische Konsistenz
+- _norm() / _fmt() überall: canonical '{:.3f}' Format
+- one-time migration value_memory
+
+### Performance
+- memory_in_sync: onTableChange nur bei Strukturänderung (numRows/numCols), kein O(n) rebuild auf CC-Events
+- _write_direct(): O(1) via _control_row_cache + _target_col_cache
+
+### Dokumentation
+- system_map tableDAT: alle 20 Features mit trigger/logic/output/condition
+- system_docs textDAT: vollständige Architektur-Doku

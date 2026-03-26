@@ -371,10 +371,7 @@ def _update_control(group, control, value):
 
 
 def _refresh_overview():
-    core = op('/project1/Instrument_Control_Core/current_values_all_core')
-    env = {'op': op, 'me': core}
-    exec(core.text, env)
-    env['refresh']()
+    op('/project1/Instrument_Control_Core/current_values_all_core').module.refresh()
 
 def _refresh_leds(full=False):
     render = op('/project1/channel_selector/vcm600_leds/render_core')
@@ -384,12 +381,12 @@ def _refresh_leds(full=False):
 
 
 def _refresh_outputs(group=None):
+    # Only cook MIDI — overview refresh happens via CHOP exec on next value change
     if group is None:
         for i in range(1,7):
             op('/project1/Instrument_Control_Core/mapped_midi_{}'.format(i)).cook(force=True)
     else:
         op('/project1/Instrument_Control_Core/mapped_midi_{}'.format(group)).cook(force=True)
-    _refresh_overview()
 
 
 def onValueChange(channel, sampleIndex, val, prev):
