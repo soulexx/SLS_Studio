@@ -17,6 +17,45 @@ _Touchdesigner/Backup/
 _Touchdesigner/Information/
 _Touchdesigner/SLS_Studio.[0-9]*.toe
 
+# TouchDesigner MCP debug/temp dumps
+_Touchdesigner/_tmp_*
+_Touchdesigner/_check_*
+_Touchdesigner/_verify_*
+_Touchdesigner/_live_*
+_Touchdesigner/_livecheck_*
+_Touchdesigner/_rawname*
+_Touchdesigner/_rows_*
+_Touchdesigner/_reduced_*
+_Touchdesigner/_inspect_*
+_Touchdesigner/_dump_*
+_Touchdesigner/_probe_*
+_Touchdesigner/_rewire_*
+_Touchdesigner/_postwire*
+_Touchdesigner/_aftergeneric_*
+_Touchdesigner/_exactwire_*
+_Touchdesigner/_explicitwire_*
+_Touchdesigner/_fixedwire_*
+_Touchdesigner/_finalwire_*
+_Touchdesigner/_sourcecheck_*
+_Touchdesigner/_statecheck_*
+_Touchdesigner/_persist_*
+_Touchdesigner/_postcleanup_*
+_Touchdesigner/_postwire2_*
+_Touchdesigner/_direct*
+_Touchdesigner/_nomirror_*
+_Touchdesigner/_input_*
+_Touchdesigner/_core_*
+_Touchdesigner/_root_*
+_Touchdesigner/_connector_*
+_Touchdesigner/_td_*
+_Touchdesigner/_merge_*
+_Touchdesigner/_event_*
+_Touchdesigner/_selector_*
+_Touchdesigner/_state_*
+_Touchdesigner/*_selector_dump.txt
+_Touchdesigner/*_live_dump.txt
+_Touchdesigner/*.tsv
+
 # Local environment noise
 .env
 .venv/
