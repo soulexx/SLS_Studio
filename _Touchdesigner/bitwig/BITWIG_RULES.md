@@ -57,6 +57,7 @@ Wenn sich diese Daten aendern:
 - Vor strukturellen Aenderungen an Bitwig-Komponenten bestehende OSC-, AsyncIO- und Callback-Pfade pruefen.
 - Live-Test hat Vorrang vor Annahmen.
 - Wenn keine Live-Daten sichtbar sind, zwischen Struktur korrekt und Verbindung verifiziert unterscheiden.
+- `bitwigRemotesTrack*` nicht per Script reconnecten, wenn ein echter tdBitwig-Neuaufbau noetig ist; der manuelle `Connect`-Reconnect im UI ist im aktuellen Projekt verifiziert stabiler als `Connect`-/Listener-Resets per Python.
 
 ## Deep Mapping
 
@@ -66,6 +67,7 @@ Wenn sich diese Daten aendern:
 - Die rohen acht VCM-600-Deep-Fader werden im `Instrument_Control_Core` als `fx_grid_1 .. fx_grid_8` angezeigt und lesen direkt aus dem internen `fx_grid`-Router, nicht aus dem bereits gegateten Deep-Bus.
 - Aktuell sind direkte `Remotecontrol0..7`-Schreibzugriffe live verifiziert.
 - Remote-Page-Umschaltung ist strukturell vorbereitet, aber noch nicht live verifiziert, solange `projectRemotesMacros1` keine belegten `PageNames` meldet.
+- Die aktuelle Root-Reihe `bitwigRemotesTrack1_1 .. 6_3` kann nach Script-Resets in einen scheinbar verbundenen, aber intern falsch gebundenen Zustand geraten; wenn Track-/Parameter-Spiegelungen auftreten, zuerst die betroffenen Remotes manuell im UI reconnecten und erst danach weiterdebuggen.
 
 ## Debug-Regeln
 

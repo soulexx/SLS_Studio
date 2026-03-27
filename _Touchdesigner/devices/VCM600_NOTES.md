@@ -1,21 +1,22 @@
 # VCM-600 Notes
 
 ## Principles
-- Do not hide corrections in callbacks.
-- Correct `vcm600_map` and `vcm600_led_map` directly to live-confirmed values.
-- Only button-style controls belong in `vcm600_led_map`.
+- `vcm600` is the device adapter.
+- `vcm600_map` is now the minimal physical input map.
+- `vcm600_led_state` on root owns LED meaning.
+- `vcm600` only renders that LED state back to MIDI.
 
-## Current Test Nodes
-- `vcm600_midi_out`
-- `vcm600_led_test_api`
-- `vcm600_led_send_log`
-- `vcm600_all_leds_on`
-- `vcm600_all_leds_off`
+## Current Runtime Areas
+- Rules: `vcm600_notes`
+- I/O: `led_in`, `vcm600_in`
+- Verarbeitung: `vcm600_lookup`, `vcm600_callbacks`
+- Bus: `current_bus_event`, `out1`, `vcm600_map`, `out2`
+- LED: `vcm600_led_exec`, `vcm600_led_renderer`, `led_output_state`, `vcm600_midi_out`, `vcm600_led_send_log`
+- Tests: `vcm600_all_leds_on`, `vcm600_all_leds_off`
 
-## Current Confirmed Mapping Notes
-- Global upper `fx_grid` is corrected in tables to indices `12..19`.
-- Global lower `fx_btn_grid` is corrected in tables to indices `70..77`.
-- `all_leds_on/off` is currently driven from the live-confirmed `vcm600_led_map`.
+## Map Rule
+- `vcm600_map` now only contains: `etype`, `ch`, `idx`, `topic`
+- no extra semantic columns live in the device map anymore
 
 ## Documentation Rule
-- If live tests disagree with imported manuals or copied mappings, update the tables directly and record the result here.
+- If live tests disagree with manuals or copied mappings, update the live map directly and keep this note short.

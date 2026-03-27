@@ -1,182 +1,268 @@
-MEMORY_PATH = '/project1/Instrument_Control_Core/channel_value_memory'
-FX_GRID_MEMORY_PATH = '/project1/Instrument_Control_Core/fx_grid_memory'
-SELECTOR_PATH = '/project1/channel_selector/channel_selector_state'
+MEMORY_PATH = '/project1/project_memory/channel_value_memory'
+FX_GRID_MEMORY_PATH = '/project1/project_memory/fx_grid_memory'
+FX_GRID_CONTROL_MEMORY_PATH = '/project1/project_memory/fx_grid_control_memory'
+SELECTOR_STATE_PATH = '/project1/Instrument_Control_Core/selector_in'
+FOCUS_STATE_PATH = '/project1/Instrument_Control_Core/focus_in'
+VCM_EVENT_PATH = '/project1/Instrument_Control_Core/vcm_in'
 OUT_PATH = '/project1/Instrument_Control_Core/current_values_all'
-DEEP_STATE_PATH = '/project1/Instrument_Control_Core/deep_state'
-FOCUS_STATE_PATH = '/project1/Instrument_Control_Core/focus_router/focus_state'
-FX_GRID_PATH = '/project1/Instrument_Control_Core/fx_grid_router/fx_grid_out'
-CONTROL_ORDER = ['hi_eq','mid_eq','low_eq','pan','send_a','send_b','resonance','frequency','hi','mid','low','mute','solo','cf_asn','clip','track','stop','play']
-FX_GRID_ORDER = [
-    ('vcm600_global_fx_grid_1_1', 'fx_grid_1'),
-    ('vcm600_global_fx_grid_1_2', 'fx_grid_2'),
-    ('vcm600_global_fx_grid_1_3', 'fx_grid_3'),
-    ('vcm600_global_fx_grid_1_4', 'fx_grid_4'),
-    ('vcm600_global_fx_grid_2_1', 'fx_grid_5'),
-    ('vcm600_global_fx_grid_2_2', 'fx_grid_6'),
-    ('vcm600_global_fx_grid_2_3', 'fx_grid_7'),
-    ('vcm600_global_fx_grid_2_4', 'fx_grid_8'),
+MAIN_PATH = '/project1/Instrument_Control_Core/current_values_main'
+FX_GRID_PATH = '/project1/Instrument_Control_Core/current_values_fx_grid'
+FX_GRID_CONTROL_PATH = '/project1/Instrument_Control_Core/current_values_fx_grid_by_control'
+
+CONTROL_ORDER = [
+    'eq_hi', 'eq_mid', 'eq_low', 'pan', 'send_a', 'send_b', 'resonance', 'frequency',
+    'hi_cut', 'mid_cut', 'low_cut', 'mute', 'solo', 'cf_asn', 'clip', 'track', 'stop', 'play', 'level'
 ]
-HEADER = ['control', 'live_1', '1.1', '1.2', '1.3', 'live_2', '2.1', '2.2', '2.3', 'live_3', '3.1', '3.2', '3.3', 'live_4', '4.1', '4.2', '4.3', 'live_5', '5.1', '5.2', '5.3', 'live_6', '6.1', '6.2', '6.3']
+FX_GRID_CONTROLS = ['eq_hi', 'eq_mid', 'eq_low', 'pan', 'send_a', 'send_b', 'resonance', 'frequency']
+FX_GRID_LABELS = ['fx_grid_{}'.format(i) for i in range(1, 9)]
+HEADER = [
+    'control',
+    'live_1', '1.1', '1.2', '1.3',
+    'live_2', '2.1', '2.2', '2.3',
+    'live_3', '3.1', '3.2', '3.3',
+    'live_4', '4.1', '4.2', '4.3',
+    'live_5', '5.1', '5.2', '5.3',
+    'live_6', '6.1', '6.2', '6.3',
+]
 EMPTY_CELLS = [''] * (len(HEADER) - 2)
+PAGE_BY_CONTROL = {
+    'eq_hi': 0,
+    'eq_mid': 1,
+    'eq_low': 2,
+    'pan': 3,
+    'send_a': 4,
+    'send_b': 5,
+    'resonance': 6,
+    'frequency': 7,
+}
+SUMMARY_ROWS = {'focus_channel', 'focus_control', 'page_index', 'active_slots', 'deep_valid', 'active'}
 
 
-def _format_value(v):
+def _format_value(value):
     try:
-        v = float(v)
+        number = float(value)
     except Exception:
-        return str(v)
-    if abs(v - round(v)) < 1e-6:
-        return str(int(round(v)))
-    return '{:.3f}'.format(v)
+        return str(value)
+    if abs(number - round(number)) < 1e-6:
+        return str(int(round(number)))
+    return '{:.3f}'.format(number)
 
 
-def _selector_active(group, slot):
-    d = op(SELECTOR_PATH)
-    if not d:
-        return '0'
-    key = 'track_{}.{}'.format(group, slot)
-    for row in range(1, d.numRows):
-        if d[row, 0].val == key:
-            return '1' if d[row, 1].val == '1' else '0'
-    return '0'
+def _table_dict(dat):
+    values = {}
+    if not dat or dat.numRows < 2:
+        return values
+    for row in range(1, dat.numRows):
+        key = dat[row, 0].val
+        if not key:
+            continue
+        values[key] = dat[row, 1].val if dat.numCols > 1 else ''
+    return values
 
 
-def _memory_value(group, slot, control):
-    d = op(MEMORY_PATH)
-    if not d:
-        return '0'
-    key = '{}.{}'.format(group, slot)
-    for row in range(1, d.numRows):
-        if d[row, 0].val == key and d[row, 3].val == control:
-            val = d[row, 4].val
-            if d[row, 5].val != '1':
-                return val + ' p'
-            return val
-    return '0'
+def _selector_state():
+    active = set()
+    dat = op(SELECTOR_STATE_PATH)
+    if not dat or dat.numRows < 2:
+        return active
+    for row in range(1, dat.numRows):
+        slot = dat[row, 0].val
+        state = dat[row, 1].val if dat.numCols > 1 else '0'
+        if state == '1':
+            active.add(slot)
+    return active
 
 
-def _ensure_fx_grid_memory():
-    table = op(FX_GRID_MEMORY_PATH)
-    if not table:
-        return None
-    header = ['slot', 'group', 'sub'] + ['fx_grid_{}'.format(i) for i in range(1, 9)]
-    if table.numRows == 0:
-        table.appendRow(header)
-    elif table.numCols != len(header) or any(table[0, i].val != header[i] for i in range(len(header))):
-        table.clear()
-        table.appendRow(header)
-    existing = set()
-    for row in range(1, table.numRows):
-        existing.add((table[row, 1].val, table[row, 2].val))
-    for group in range(1, 7):
-        for slot in (1, 2, 3):
-            key = (str(group), str(slot))
-            if key not in existing:
-                table.appendRow(['{}.{}'.format(group, slot), str(group), str(slot)] + ['0'] * 8)
-    return table
+def _channel_memory():
+    values = {}
+    dat = op(MEMORY_PATH)
+    if not dat or dat.numRows < 2:
+        return values
+    for row in range(1, dat.numRows):
+        try:
+            group = dat[row, 1].val
+            sub = dat[row, 2].val
+            control = dat[row, 3].val
+            value = dat[row, 4].val
+        except Exception:
+            continue
+        values[(group, sub, control)] = value
+    return values
 
 
-def _fx_grid_memory_value(group, slot, label):
-    table = _ensure_fx_grid_memory()
-    if not table:
-        return '0'
-    col = None
-    for c in range(table.numCols):
-        if table[0, c].val == label:
-            col = c
-            break
-    if col is None:
-        return '0'
-    for row in range(1, table.numRows):
-        if table[row, 1].val == str(group) and table[row, 2].val == str(slot):
-            return table[row, col].val or '0'
-    return '0'
+def _vcm_event():
+    return _table_dict(op(VCM_EVENT_PATH))
 
 
-def _live_value(group, control):
-    src = op('/project1/Instrument_Control_Core/in{}'.format(group))
-    ch = src.chan(control) if src else None
-    if ch is None:
-        return '0'
-    try:
-        return _format_value(float(ch[0]))
-    except Exception:
-        return '0'
+def _fx_grid_memory():
+    values = {}
+    dat = op(FX_GRID_MEMORY_PATH)
+    if not dat or dat.numRows < 2:
+        return values
+    col_map = {dat[0, c].val: c for c in range(dat.numCols)}
+    for row in range(1, dat.numRows):
+        group = dat[row, col_map['group']].val
+        sub = dat[row, col_map['sub']].val
+        for label in FX_GRID_LABELS:
+            values[(group, sub, label)] = dat[row, col_map[label]].val
+    return values
 
 
-def _deep_state_value(key, default='-'):
-    d = op(DEEP_STATE_PATH)
-    if not d:
-        return default
-    for row in range(1, d.numRows):
-        if d[row, 0].val == key:
-            return d[row, 1].val or default
-    return default
+def _fx_grid_control_memory():
+    values = {}
+    dat = op(FX_GRID_CONTROL_MEMORY_PATH)
+    if not dat or dat.numRows < 2:
+        return values
+    col_map = {dat[0, c].val: c for c in range(dat.numCols)}
+    for row in range(1, dat.numRows):
+        group = dat[row, col_map['group']].val
+        sub = dat[row, col_map['sub']].val
+        control = dat[row, col_map['control']].val
+        for label in FX_GRID_LABELS:
+            values[(group, sub, control, label)] = dat[row, col_map[label]].val
+    return values
 
 
-def _focus_state_value(key, default='-'):
-    d = op(FOCUS_STATE_PATH)
-    if not d:
-        return default
-    for row in range(1, d.numRows):
-        if d[row, 0].val == key:
-            return d[row, 1].val or default
-    return default
+def _group_slots(group, active_slots):
+    return [slot for slot in ('1', '2', '3') if '{}.{}'.format(group, slot) in active_slots]
 
 
-def _fx_grid_value(name):
-    src = op(FX_GRID_PATH)
-    ch = src.chan(name) if src else None
-    if ch is None:
-        return '0'
-    try:
-        return _format_value(float(ch[0]))
-    except Exception:
-        return '0'
+def _preferred_slot(group, active_slots, focus_slot):
+    active_group_slots = _group_slots(group, active_slots)
+    if focus_slot and focus_slot.startswith(str(group) + '.') and focus_slot in active_slots:
+        return focus_slot.split('.', 1)[1]
+    if active_group_slots:
+        return active_group_slots[0]
+    return '1'
 
 
 def _summary_row(label, value):
     return [label, str(value)] + list(EMPTY_CELLS)
 
 
-def _focus_channel_row():
-    focus_group = int(float(_deep_state_value('focus_group', '0') or 0))
+def _copy_rows(dst, rows):
+    if not dst:
+        return
+    dst.clear()
+    for row in rows:
+        dst.appendRow(row)
+
+
+def _existing_live_values(table):
+    values = {}
+    if not table or table.numRows < 2 or table.numCols < 2:
+        return values
+    live_cols = {}
+    for c in range(table.numCols):
+        header = table[0, c].val
+        if header.startswith('live_'):
+            live_cols[header.replace('live_', '')] = c
+    for r in range(1, table.numRows):
+        control = table[r, 0].val
+        if not control:
+            continue
+        for group, col in live_cols.items():
+            values[(group, control)] = table[r, col].val
+    return values
+
+
+def _refresh_views(out):
+    if not out or out.numRows == 0:
+        return
+    rows = [[out[r, c].val for c in range(out.numCols)] for r in range(out.numRows)]
+    header = rows[0]
+    body = rows[1:]
+
+    main_rows = [header]
+    fx_rows = [header]
+    fx_control_rows = [header]
+    current_control = None
+
+    for row in body:
+        label = row[0]
+        if not label:
+            continue
+        if label in SUMMARY_ROWS or label in CONTROL_ORDER:
+            main_rows.append(row)
+            continue
+        if label.startswith('fx_grid_'):
+            fx_rows.append(row)
+            continue
+        if '_fx_grid_' in label:
+            control = label.split('_fx_grid_', 1)[0]
+            if current_control is not None and control != current_control:
+                fx_control_rows.append([''] * len(header))
+            if current_control != control:
+                fx_control_rows.append(['[{}]'.format(control)] + [''] * (len(header) - 1))
+            pretty = list(row)
+            pretty[0] = pretty[0].split('_fx_grid_', 1)[1]
+            fx_control_rows.append(pretty)
+            current_control = control
+
+    _copy_rows(op(MAIN_PATH), main_rows)
+    _copy_rows(op(FX_GRID_PATH), fx_rows)
+    _copy_rows(op(FX_GRID_CONTROL_PATH), fx_control_rows)
+
+
+def _focus_channel_row(focus_ch):
     row = ['focus_channel']
     for group in range(1, 7):
-        row.append(str(group) if group == focus_group and focus_group > 0 else '')
+        row.append(str(group) if str(group) == focus_ch and focus_ch else '')
         row.extend(['', '', ''])
     return row
 
 
-def _active_slots_summary(group):
-    active = [str(slot) for slot in range(1, 4) if _selector_active(group, slot) == '1']
-    return ','.join(active) if active else '-'
-
-
-def _active_slots_row():
-    row = ['active_slots']
-    for group in range(1, 7):
-        row.append(_active_slots_summary(group))
-        row.extend(['', '', ''])
-    return row
-
-
-def _focus_control_row():
+def _focus_control_row(focus_ch, focus_control):
     row = ['focus_control']
     for group in range(1, 7):
-        row.append(_focus_state_value('focus_group_{}'.format(group), '-'))
+        row.append(focus_control if str(group) == focus_ch and focus_control else '')
         row.extend(['', '', ''])
     return row
 
 
-def _fx_grid_row(label, source_name):
-    focus_group = int(float(_deep_state_value('focus_group', '0') or 0))
-    fx_value = _fx_grid_value(source_name)
+def _active_slots_row(active_slots):
+    row = ['active_slots']
+    for group in range(1, 7):
+        row.append(','.join(_group_slots(group, active_slots)) or '-')
+        row.extend(['', '', ''])
+    return row
+
+
+def _active_row(active_slots):
+    row = ['active']
+    for group in range(1, 7):
+        row.append('')
+        for sub in ('1', '2', '3'):
+            row.append('1' if '{}.{}'.format(group, sub) in active_slots else '0')
+    return row
+
+
+def _control_row(control, active_slots, focus_slot, channel_values, live_values):
+    row = [control]
+    for group in range(1, 7):
+        row.append(live_values.get((str(group), control), '0'))
+        for sub in ('1', '2', '3'):
+            row.append(channel_values.get((str(group), sub, control), '0'))
+    return row
+
+
+def _fx_grid_row(label, active_slots, focus_slot, fx_values):
     row = [label]
     for group in range(1, 7):
-        row.append(fx_value if group == focus_group else '')
-        for slot in range(1, 4):
-            row.append(_fx_grid_memory_value(group, slot, label))
+        preferred = _preferred_slot(group, active_slots, focus_slot)
+        row.append(fx_values.get((str(group), preferred, label), '0'))
+        for sub in ('1', '2', '3'):
+            row.append(fx_values.get((str(group), sub, label), '0'))
+    return row
+
+
+def _fx_grid_control_row(control, label, active_slots, focus_slot, fx_control_values):
+    row = ['{}_{}'.format(control, label)]
+    for group in range(1, 7):
+        preferred = _preferred_slot(group, active_slots, focus_slot)
+        row.append(fx_control_values.get((str(group), preferred, control, label), '0'))
+        for sub in ('1', '2', '3'):
+            row.append(fx_control_values.get((str(group), sub, control, label), '0'))
     return row
 
 
@@ -184,28 +270,48 @@ def refresh():
     out = op(OUT_PATH)
     if not out:
         return
+
+    existing_live_values = _existing_live_values(out)
+    focus = _table_dict(op(FOCUS_STATE_PATH))
+    active_slots = _selector_state()
+    channel_values = _channel_memory()
+    live_event = _vcm_event()
+    fx_values = _fx_grid_memory()
+    fx_control_values = _fx_grid_control_memory()
+
+    focus_slot = focus.get('focus_slot', '')
+    focus_control = focus.get('focus_control', '')
+    focus_ch = focus.get('focus_ch', '')
+    deep_valid = '1' if focus_slot and focus_control else '0'
+    page_index = str(PAGE_BY_CONTROL.get(focus_control, 0))
+    live_values = dict(existing_live_values)
+    live_topic = live_event.get('topic', '')
+    live_value = live_event.get('value', '0')
+    parts = live_topic.split('/')
+    if len(parts) >= 4 and parts[0] == 'vcm600' and parts[1] == 'channel':
+        live_group = parts[2]
+        live_control = parts[3]
+        live_values[(str(live_group), live_control)] = live_value
+
     out.clear()
     out.appendRow(HEADER)
-    out.appendRow(_focus_channel_row())
-    out.appendRow(_focus_control_row())
-    out.appendRow(_summary_row('page_index', _deep_state_value('page_index', '0')))
-    out.appendRow(_active_slots_row())
-    out.appendRow(_summary_row('deep_valid', _deep_state_value('focus_valid', '0')))
-    active_row = ['active']
-    for group in range(1,7):
-        active_row.append('')
-        active_row.extend([_selector_active(group, 1), _selector_active(group, 2), _selector_active(group, 3)])
-    out.appendRow(active_row)
+    out.appendRow(_focus_channel_row(focus_ch))
+    out.appendRow(_focus_control_row(focus_ch, focus_control))
+    out.appendRow(_summary_row('page_index', page_index))
+    out.appendRow(_active_slots_row(active_slots))
+    out.appendRow(_summary_row('deep_valid', deep_valid))
+    out.appendRow(_active_row(active_slots))
+
     for control in CONTROL_ORDER:
-        row = [control]
-        for group in range(1,7):
-            row.append(_live_value(group, control))
-            row.extend([_memory_value(group, 1, control), _memory_value(group, 2, control), _memory_value(group, 3, control)])
-        out.appendRow(row)
-    for source_name, label in FX_GRID_ORDER:
-        out.appendRow(_fx_grid_row(label, source_name))
+        out.appendRow(_control_row(control, active_slots, focus_slot, channel_values, live_values))
 
+    for label in FX_GRID_LABELS:
+        out.appendRow(_fx_grid_row(label, active_slots, focus_slot, fx_values))
 
-def onFrameEnd(frame):
-    refresh()
-    return
+    out.appendRow([''] + list(EMPTY_CELLS))
+
+    for control in FX_GRID_CONTROLS:
+        for label in FX_GRID_LABELS:
+            out.appendRow(_fx_grid_control_row(control, label, active_slots, focus_slot, fx_control_values))
+
+    _refresh_views(out)

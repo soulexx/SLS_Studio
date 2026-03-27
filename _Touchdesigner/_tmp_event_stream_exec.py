@@ -10,12 +10,16 @@ CONTROL_REMAP = {
 }
 CONTROL_ORDER = ['hi_eq','mid_eq','low_eq','pan','send_a','send_b','resonance','frequency','hi','mid','low','mute','solo','cf_asn','clip','track','stop','play']
 HYBRID_CONTROLS = ['hi_eq','mid_eq','low_eq','pan','send_a','send_b','resonance','frequency']
-MEMORY_PATH = '/project1/Instrument_Control_Core/channel_value_memory'
+MEMORY_PATH = '/project1/project_memory/channel_value_memory'
 HYBRID_STATE_PATH = '/project1/Instrument_Control_Core/hybrid_fader_state'
-FX_GRID_MEMORY_PATH = '/project1/Instrument_Control_Core/fx_grid_memory'
+FX_GRID_MEMORY_PATH = '/project1/project_memory/fx_grid_memory'
+FX_GRID_CONTROL_MEMORY_PATH = '/project1/project_memory/fx_grid_control_memory'
+FOCUS_CONTEXT_STATE_PATH = '/project1/focus_context/focus_state'
+MODULAR_FX_GRID_PATH = '/project1/vcm600_processing/fx_grid/out1'
 GUMMIBAND_CORE_PATH = '/project1/gummiband_master/gummiband_core'
 PICKUP_THRESHOLD = 0.03
 EPSILON = 0.0001
+FX_GRID_CONTROLS = ['hi_eq','mid_eq','low_eq','pan','send_a','send_b','resonance','frequency']
 FX_GRID_ORDER = [
     'vcm600_global_fx_grid_1_1',
     'vcm600_global_fx_grid_1_2',
@@ -114,14 +118,47 @@ def _ensure_fx_grid_memory():
     return table
 
 
+def _ensure_fx_grid_control_memory():
+    table = op(FX_GRID_CONTROL_MEMORY_PATH)
+    if not table:
+        return None
+    header = ['slot', 'group', 'sub', 'control'] + ['fx_grid_{}'.format(i) for i in range(1, 9)]
+    if table.numRows == 0:
+        table.appendRow(header)
+    elif table.numCols != len(header) or any(table[0, i].val != header[i] for i in range(len(header))):
+        table.clear()
+        table.appendRow(header)
+    existing = set()
+    for row in range(1, table.numRows):
+        existing.add((table[row, 1].val, table[row, 2].val, table[row, 3].val))
+    for group in range(1, 7):
+        for slot in (1, 2, 3):
+            for control in FX_GRID_CONTROLS:
+                key = (str(group), str(slot), control)
+                if key not in existing:
+                    table.appendRow(['{}.{}'.format(group, slot), str(group), str(slot), control] + ['0'] * 8)
+    return table
+
+
+def _focus_control():
+    d = op(FOCUS_CONTEXT_STATE_PATH)
+    if not d:
+        return ''
+    for row in range(1, d.numRows):
+        if d[row, 0].val == 'focus_control':
+            return d[row, 1].val or ''
+    return ''
+
+
 def _write_fx_grid_snapshot(group, slot):
     table = _ensure_fx_grid_memory()
-    src = op('/project1/Instrument_Control_Core/fx_grid_router/fx_grid_out')
+    control_table = _ensure_fx_grid_control_memory()
+    src = op(MODULAR_FX_GRID_PATH)
     if not table or not src:
         return
     values = []
     for name in FX_GRID_ORDER:
-        ch = src.chan(name)
+        ch = src.chan(name.replace('vcm600_global_', ''))
         try:
             values.append(_format_number(float(ch[0])))
         except Exception:
@@ -130,7 +167,14 @@ def _write_fx_grid_snapshot(group, slot):
         if table[row, 1].val == str(group) and table[row, 2].val == str(slot):
             for idx, value in enumerate(values, start=3):
                 table[row, idx] = value
-            return
+            break
+    control_name = _focus_control()
+    if control_table and control_name in FX_GRID_CONTROLS:
+        for row in range(1, control_table.numRows):
+            if control_table[row, 1].val == str(group) and control_table[row, 2].val == str(slot) and control_table[row, 3].val == control_name:
+                for idx, value in enumerate(values, start=4):
+                    control_table[row, idx] = value
+                break
 
 
 def _name_to_parts(channel_name):

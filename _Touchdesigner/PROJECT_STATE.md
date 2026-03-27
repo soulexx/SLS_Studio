@@ -2,12 +2,24 @@
 
 ## Current Focus
 - Keep the plain VCM-600 input path stable.
+- Keep the new virtual VCM-600 replacement surface aligned with the existing DAT event semantics.
+- Keep `channel_selector` reduced to pure selector truth.
 - Keep the active `/project1` root reduced to the current live runtime blocks plus centralized project docs.
 
 ## Verified Status
+- `/project1/vcm600_ui` now exists as a root-level virtual VCM-600 surface with one visible board viewer and one DAT output `out1`.
+- `/project1/vcm600_ui` reads the live hardware event feed from `/project1/vcm600/out1` through `hardware_in` and mirrors the existing LED state from `/project1/vcm600/led_output_state` through `led_in`.
+- `/project1/vcm600_ui/out1` now emits the same compact field/value event schema as `/project1/vcm600/current_bus_event`: `event_id`, `name`, `value`, `etype`, `channel`, `index`, `topic`, `label`.
+- `/project1/vcm600_ui` now keeps its own split input/effective state as DAT tables: `control_map`, `widget_map`, `layout_map`, `hardware_state`, `ui_state`, `source_state`, `effective_state`, `led_state`, and `bank_state`.
+- The virtual surface applies strict per-control `last-input-wins` keyed by `etype + topic`, so controls with the same topic but different event type stay separate.
+- The visible `vcm600_ui` board currently approximates the real hardware as six channel strips plus right-hand global sections for effects, return/master, transport, and tempo/scene.
+- `vcm600_ui` now uses a visible `Bank A / Bank B` switch so the six strip widgets can address channel topics `1..6` or `7..12` without drawing a 12-strip board.
+- Verified live inside `/project1/vcm600_ui`: direct UI resolver events write the expected DAT event output, and injected hardware-side events update both `event_out` and the visible widget values without TouchDesigner errors.
 - The current live `/project1` root is reduced to:
-  - `vcm600`
-  - `cntrlr`
+- `vcm600`
+- `focus_context`
+- `project_memory`
+- `cntrlr`
   - `midicon`
   - `midicraft`
   - `channel_selector`
@@ -23,22 +35,43 @@
 - `vcm600`, `cntrlr`, `midicon`, and `midicraft` now live directly on `/project1` root inside a shared visible device area.
 - The device documentation mirrors now live centrally under `/project1/project_docs` as synced `device_rules` and `mapping_rules` text DATs; the old documentation-only `/project1/devices` base has been removed.
 - `/project1/project_docs` now centralizes the active project docs as synced `project_agents`, `project_state`, `project_worklog`, `device_rules`, `mapping_rules`, `bitwig_rules`, `vcm600_notes`, and `cntrlr_notes`.
+- `/project1/focus_context` is now reduced to a small DAT-only focus block.
+- `/project1/project_memory` now exists as the visible central root memory area for the one shared generic value memory.
+- `/project1` root is now spatially organized in clear columns:
+  - docs/support
+  - device input
+  - context/state
+  - core
+  - MIDI output
+  - Bitwig targets/tests
+- `/project1` root wiring is now direct `vcm600 -> channel_selector`, with `focus_context` and `project_memory` as separate supporting root blocks downstream of the device input.
+- The internal layout of `focus_context`, `project_memory`, and `Instrument_Control_Core` is now arranged consistently in the order `Rules / I/O / Verarbeitung / Bus-State / Ergebnis / Debug/Views` where the contained nodes allow it.
+- `/project1/vcm600` is now reduced to a DAT event block: `vcm600_in` receives MIDI, `vcm600_callbacks` translates the live message through `vcm600_map`, `current_bus_event` keeps the latest normalized event, and `out1` now exposes that event table directly as the visible root DAT output.
+- `/project1/vcm600/current_bus_event` is again the one visible readable event record with `event_id`, `name`, `value`, `etype`, `channel`, `index`, `topic`, and `label`.
+- `/project1/vcm600/current_bus_event` now again carries normalized controller values only: `note -> 0.000/1.000`, `cc -> 0.000..1.000` with `3` decimals.
+- `/project1/vcm600/vcm600_lookup` is now reduced to the minimal topic lookup helper for that event path.
+- `/project1/vcm600/out2` now exists as the single visible VCM-600 map output and exposes `/project1/vcm600/vcm600_map` directly as the root map truth for downstream consumers.
+- `/project1/vcm600/vcm600_callbacks` no longer stores lookup helper environments in component storage; the earlier save-unsafe cache was removed after it wrote an unpickleable `td.OPShortcut` into `/project1/vcm600` storage and blocked `.toe` saving.
 - The root-level device area is now stacked vertically for a clearer `device -> channel_selector -> Instrument_Control_Core -> Midi_Bitwig_Ch*` reading direction.
 - `vcm600` and `cntrlr` are active and mapped.
 - The old root eventbus write path has been removed from `vcm600_callbacks` and `cntrlr_callbacks`; device-local debug/event tables stay inside the device blocks.
-- `/project1/vcm600` now exposes one normalized root-level CHOP output, and `/project1/channel_selector` exposes one root-level CHOP input.
-- Root now shows the `vcm600 -> channel_selector` relationship as one direct cable between the two COMPs without the temporary root DAT helper nodes.
-- `/project1/channel_selector/selector_logic/event_in` is now a local event table fed by an internal CHOP bridge instead of a root DAT select.
-- `/project1/channel_selector` now keeps the active selector slots as an internal normalized CHOP that feeds its internal Bitwig router.
+- `/project1/channel_selector` now receives the visible DAT event feed directly from `/project1/vcm600/out1` through a root DAT cable.
+- `/project1/channel_selector/in1` is now an `inDAT`, and `event_in_exec` is the small DAT execute bridge that copies the incoming VCM-600 event into the local normalized `selector_logic/event_in` table.
+- `/project1/channel_selector/selector_logic/event_in` is now a local one-event table with fixed event fields (`event_id`, `channel`, `index`, `value`, `topic`).
+- `/project1/channel_selector` now keeps the active selector slots as its own selector truth and exposes that state through the visible root DAT output `out1`.
+- `/project1/channel_selector/selector_logic/selector_map` still maps selector truth from the readable VCM-600 selector topics `cf_asn`, `clip`, and `track`.
 - `channel_selector` currently uses 18 independent toggles: each mapped `cf_asn`, `clip`, or `track` button toggles exactly one `track_x.y` slot without per-group exclusivity.
-- The routing helpers `bitwig_midi_router` and `vcm600_group_router` now live inside `/project1/channel_selector` instead of as separate root blocks.
-- `/project1/vcm600/current_bus_event` now shows only the latest active VCM-600 input in compact form (`topic`, `val`, `label`) inside the device block.
+- `/project1/channel_selector/selection_readout` is now rebuilt directly from `/project1/channel_selector/channel_selector_state` on every state-table change, instead of relying on an indirect/stale update path.
+- `/project1/channel_selector/state_change_exec` now triggers only the immediate selector readout rebuild whenever `channel_selector_state` changes.
+- The old CHOP selector path (`selection_out`, `selection_out_callbacks1`) and the duplicate state debug `selectDAT`s have been removed from `/project1/channel_selector`.
+- `/project1/vcm600/current_bus_event` now holds the latest normalized VCM-600 event as compact key/value data (`name`, `value`, `etype`, `channel`, `index`, `topic`, `label`) and also drives `event_out`.
+- The heavier debug-only VCM-600 tables `vcm600_debug`, `vcm600_last_match`, and `vcm600_bus_events` have been removed from the live input path.
+- `/project1/vcm600` now again contains the VCM-600 LED output side as a device-local renderer area: `led_output_state`, `vcm600_led_renderer`, `vcm600_led_exec`, `vcm600_midi_out`, `vcm600_led_send_log`, and the local test helpers `vcm600_all_leds_on` / `vcm600_all_leds_off`.
+- The rebuilt VCM-600 LED output uses `/project1/vcm600/vcm600_map` as the single physical source of truth for both button input mapping and LED note rendering; no separate `vcm600_led_map` is maintained.
+- The rebuilt VCM-600 LED path currently renders selector LEDs from `/project1/channel_selector/channel_selector_state` into `/project1/vcm600/led_output_state`, then sends the changed note values through `/project1/vcm600/vcm600_midi_out`.
 - VCM-600 LED tests work from the device area.
-- `/project1/vcm600/vcm600_led_test_api` now sends VCM-600 LED off-states again as `Note On` with value `0` instead of `Note Off`, matching the live-confirmed `vcm600_led_map` notes.
-- `/project1/vcm600/vcm600_midi_out` now uses `onebased = true`, matching the working Bitwig MIDI outputs and restoring the VCM-600 LED device-table binding on `/local/midi/device` row `id=1`.
-- `/project1/channel_selector/event_stream_exec` now triggers a direct selector LED refresh after every successful selector toggle change.
-- That selector-toggle LED refresh now uses `render_core.module.render(False)` diff rendering instead of a script `exec` plus full refresh, reducing LED traffic and keeping toggle feedback immediate.
-- `/project1/vcm600/vcm600_all_leds_on` and `/project1/vcm600/vcm600_all_leds_off` now again point to the live root `/project1/vcm600/vcm600_led_test_api` path instead of the removed old `/project1/devices/...` path.
+- `/project1/vcm600/vcm600_midi_out` now uses `onebased = true` and device row `id=1`, matching the live VCM-600 device binding on `/local/midi/device`.
+- The rebuilt VCM-600 LED renderer sends off-states as `Note On` with value `0` and on-states as `Note On` with value `127`.
 - CNTRLR LED tests work on direct hardware channel 1, including color values and test animations.
 - Bitwig is reachable again on `127.0.0.1:8088` and TouchDesigner is listening on `9099`.
 - MIDI device `11` is currently connected to Bitwig MIDI In and is used for Bitwig control through MIDI mapping.
@@ -46,12 +79,17 @@
 - `/local/midi/device` currently maps those fixed Bitwig output rows to `BMT 1..6`; the earlier live regression where rows `12..16` had empty `outdevice` fields has been corrected again.
 - The six `Midi_Bitwig_Ch*` `midi_out` operators are currently bound directly to MIDI device IDs `11..16`.
 - `/project1/Midi_Bitwig_Ch1` now acts as the fixed group-1 Bitwig MIDI output block and targets MIDI device `11`.
-- `/project1/focus_router` now tracks the last touched deep control family across all six `channel_selector/out1..out6` group streams and now exposes both `focus_control` and `focus_group` for the active deep channel.
-- The old root helper blocks `fx_grid_router`, `focus_router`, and `fx_subbank_map` have been removed from `/project1` after their logic was moved into `/project1/Instrument_Control_Core`.
-- `/project1/Instrument_Control_Core/in8` now takes the raw VCM-600 feed for internal `fx_grid` extraction, and `/project1/Instrument_Control_Core/in7` now takes the internal deep-mapped output.
-- `/project1/Instrument_Control_Core/fx_grid_router`, `/project1/Instrument_Control_Core/focus_router`, and `/project1/Instrument_Control_Core/fx_subbank_map` now exist as internal helper blocks of the core instead of as root-level runtime blocks.
-- The current visible deep root path is now `vcm600 -> Instrument_Control_Core -> bitwigRemotesTrackx_y`, with `channel_selector` still providing the selector truth and focus source.
+- The old standalone root helper blocks `fx_grid_router`, `focus_router`, and `fx_subbank_map` remain removed; that logic now lives in `/project1/focus_context`.
+- `/project1/focus_context` now contains only `in1`, `focus_exec`, `focus_state`, `focus_readout`, and `out1`.
+- `/project1/focus_context/in1` is now an `inDAT` fed from the visible VCM-600 DAT event output.
+- `/project1/focus_context/focus_state` now tracks only `focus_slot`, `focus_control`, and `focus_ch`.
+- `/project1/focus_context/focus_exec` now listens to DAT events and updates focus only from the main encoder family `hi_eq .. frequency`.
+- `/project1/focus_context` is CHOP-free and currently outputs its focus state only as DAT.
+- `/project1/project_memory` is now reduced to the generic memory path `in1 -> memory_write -> value_memory -> out1`; the older specialized tables `channel_value_memory`, `fx_grid_memory`, and `fx_grid_control_memory` have been removed from the active project.
+- The old `channel_value_memory_debug` helper has also been removed; the core now only retains runtime state, mapped MIDI outputs, trigger DATs, the reusable `hybrid_group_fader` helper block, and no longer owns the shared memory tables directly.
+- The current visible root story is now `vcm600 -> channel_selector -> Instrument_Control_Core`, with `focus_context` and `project_memory` as separate supporting root blocks and the tdBitwig write side still downstream of the core.
 - `/project1/bitwigMain` now exists directly on root as the shared live tdBitwig core for deep mapping.
+- `/project1/bitwig_listener_test` now exists as a separate root test area for the next fixed-slot listener architecture, with synced rules, six test slots (`1.1 .. 2.3`), a central bundle table, separate value tables for `main` / `fx_grid` / `fx_button`, and a verification table for live cross-talk checks.
 - `/project1/bitwigMain/out1` currently reports `connected = 1`, so the tdBitwig core is live again.
 - The tdBitwig target side now sits directly on root as `bitwigRemotesTrack1_1 .. bitwigRemotesTrack6_3`; the earlier grouped `CH_x_Instruments` and `CH_x_Deep` presentation is no longer part of the active runtime root.
 - The `bitwigRemotesTrack1_1 .. bitwigRemotesTrack6_3` layer is now treated explicitly as `18` fixed Bitwig target slots, not as a reliable dynamically retargetable `Track x.y` layer; selector/core activation decides which of those fixed targets receive writes.
@@ -68,7 +106,6 @@
   - `frequency -> page 7`
 - Direct `Remotecontrol0..7` writes from `CH_x_Deep` into the grouped `bitwigRemotesTrackx_1..x_3` targets are live-verified for the currently focused channel.
 - The `CH_x_Deep` writer path now also applies the current `focus_control` page index to each active `bitwigRemotesTrackx_y` target before writing `deep_1..8`; targets with fewer pages clamp to their highest available page.
-- `/project1/channel_selector/bitwig_midi_router` now reads the internal selector CHOP output and keeps fixed per-group activation for groups `1..6`.
 - The current fixed group mapping is:
   - group `1 -> device 11`
   - group `2 -> device 12`
@@ -80,12 +117,49 @@
   - `track_x.1 -> MIDI Channel 1`
   - `track_x.2 -> MIDI Channel 2`
   - `track_x.3 -> MIDI Channel 3`
-- `/project1/channel_selector/vcm600_group_router` now reads the incoming VCM-600 CHOP stream and exposes six fixed group outputs with semantic channels `hi_eq`, `mid_eq`, `low_eq`, `pan`, `send_a`, `send_b`, `resonance`, `frequency`, `hi`, `mid`, `low`, `mute`, `solo`, `cf_asn`, `clip`, `track`, `stop`, and `play`.
 - `/project1/Midi_Bitwig_Ch2` to `/project1/Midi_Bitwig_Ch6` now act as fixed group output blocks for groups `2..6` and target device IDs `12..16`.
 - Each Bitwig group output mirrors its incoming generic controls onto all currently active subtracks of that group.
 - Root now shows the visible mapping flow as `channel_selector -> Instrument_Control_Core -> Midi_Bitwig_Ch1 .. Midi_Bitwig_Ch6`.
 - The current visible deep tdBitwig path remains experimental; `Instrument_Control_Core` now owns the full deep helper chain and writes directly to root `bitwigRemotesTrackx_y` targets, but those grouped tdBitwig targets are not yet a reliable fixed-slot production path.
 - `/project1/Instrument_Control_Core` is now the single lean central control block with direct `in1..in6`, `out1..out6`, six script-driven MIDI outputs, and one combined base table view.
+- `/project1/Instrument_Control_Core` now reads selector and focus through the visible local DAT cable inputs `selector_in` and `focus_in`; the temporary mirror tables `selector_state_dat` and `focus_state_dat` have been removed again.
+- `/project1/Instrument_Control_Core/vcm_in` now exists as the third visible DAT cable input from `/project1/vcm600/out1`, so selector, focus, and the raw current VCM-600 event all enter the core through explicit root wiring.
+- `/project1/Instrument_Control_Core` is now reduced to the small shared-truth DAT core:
+  - `focus_in`
+  - `selector_in`
+  - `logic_in`
+  - `focus_in_sync`
+  - `selector_in_sync`
+  - `table_write`
+  - `current_values_all`
+  - `current_values_all_core`
+- The old extra readout tables, deep status helpers, and hybrid helper blocks have been removed from the visible core again.
+- `/project1/active_instruments_logic` now lives on root and owns the visible runtime logic path from `vcm600`, `focus_context`, `channel_selector`, and `gummiband` into the core.
+- `/project1/active_instruments_logic` now has visible root cables:
+  - `vcm600 -> active_instruments_logic`
+  - `focus_context -> active_instruments_logic`
+  - `channel_selector -> active_instruments_logic`
+  - `gummiband -> active_instruments_logic`
+- `/project1/Instrument_Control_Core` now receives the prepared slot-write rows only through the visible root cable `active_instruments_logic -> Instrument_Control_Core`, then forwards them internally through `logic_in -> table_write`.
+- `/project1/Instrument_Control_Core/map_in` now exists as a visible DAT cable input from `/project1/vcm600/out2`, so the core reads the VCM-600 control/map truth through an explicit root cable.
+- `/project1/Instrument_Control_Core/map_in_sync` now exists as the thin local watcher on that visible `map_in` cable and directly triggers `current_values_all_core.refresh()` when the map changes.
+- `/project1/project_memory` now also owns the generic visible value memory path: `in1 -> memory_write -> value_memory -> out1`.
+- `/project1/project_memory/value_memory` is now the one generic persisted memory table for the rows written by `active_instruments_logic`, using the schema `target / control / value`.
+- `/project1/Instrument_Control_Core/memory_in` now exists as the visible DAT cable input from `/project1/project_memory/out1`, and `memory_in_sync` now refreshes `current_values_all_core` on any memory change.
+- `/project1/Instrument_Control_Core/current_values_all_core` now restores values generically from `memory_in` for every mapped row in `current_values_all`, instead of only reading the older channel-only memory tables.
+- The visible root write/memory story is now `active_instruments_logic -> project_memory -> Instrument_Control_Core`, with the same prepared rows also entering the core directly through `logic_in`.
+- The old inner `Instrument_Control_Core/gummiband` and `Instrument_Control_Core/active_instruments_logic` blocks have been removed again; the visible root story is now `vcm600/focus_context/channel_selector/gummiband -> active_instruments_logic -> Instrument_Control_Core`.
+- `live_1 .. live_6` in `current_values_all` now come directly from the current `vcm_in` event path again; the temporary extra DAT mirror `vcm_live_state` has been removed.
+- `current_values_all` now persists the `live_1 .. live_6` values in the table itself; refreshing the table no longer clears older live controller values back to `0` on unrelated events.
+- `/project1/Instrument_Control_Core/current_values_all_core` now reads the visible VCM-600 map input `map_in` and builds the control rows from that one map truth instead of a hard-coded local control list.
+- `/project1/Instrument_Control_Core/current_values_all_core` no longer falls back to a local default control list when `map_in` is missing; without the visible map cable there is no map-driven control structure.
+- `/project1/Instrument_Control_Core/current_values_all` now includes a generic `global` column so non-channel VCM-600 values can live in the same shared-truth table without a separate side table.
+- `/project1/Instrument_Control_Core/selector_in_sync`, `/project1/Instrument_Control_Core/focus_in_sync`, and `/project1/Instrument_Control_Core/map_in_sync` are now only thin local input-exec watchers on those visible `inDAT` cable inputs; they directly trigger `current_values_all_core.refresh()` and no longer mirror external tables into extra core state.
+- `/project1/Instrument_Control_Core/current_values_all_core` is reduced to the currently used readout only: `focus_slot`, `focus_control`, `focus_ch`, `active`, and the main control rows with `live_1..6` plus slot columns `1.1 .. 6.3`.
+- The old extra readout helper `current_values_views_core` has also been removed again; `current_values_all_core` now rebuilds the derived views itself.
+- `/project1/Instrument_Control_Core/deep_write_callbacks` is now reduced to a small DAT-oriented status block; the old broken references to missing `focus_bus` / `in8` are gone, and `deep_write_state` now reports explicit waiting states instead of silently chasing dead paths.
+- The old readout trigger leftovers `current_values_all_trigger`, `current_values_all_trigger_exec`, `current_values_all_chop_exec`, `deep_writer_chop_exec`, and the old polling `deep_writer_exec` have been removed from the active core.
+- `/project1/Instrument_Control_Core/in8` now exists as the visible selector-state input from `/project1/channel_selector/out1`, so the root cable story stays readable while the remaining hidden direct selector-path reads are phased out.
 - The former inner `Group_1_MIDI_Map` to `Group_6_MIDI_Map` blocks have been removed.
 - Old unreferenced callback duplicates such as `mapped_midi_*_callbacks1` and the unused `hybrid_out_callbacks` DAT have been removed from `Instrument_Control_Core`.
 - The fixed transport rule inside `Instrument_Control_Core` is:
@@ -95,21 +169,36 @@
 - Selector activation no longer forces a MIDI state resend; toggling a slot now only updates selector state, router readouts, pickup preparation, and hybrid anchors until a real control move causes output again.
 - `Instrument_Control_Core/mapped_midi_1..6` now expose fixed `ch1..ch3` transport channels regardless of selector state, so toggling a slot no longer creates or removes MIDI channels at the output stage.
 - `/project1/channel_selector/channel_selector_state` now holds the selector-owned active slot truth inside the `channel_selector` block.
-- `/project1/Instrument_Control_Core/channel_value_memory` now holds the shared long-form memory for all `18` selector slots, including per-control stored value plus pickup state, inside the central control block.
 - `/project1/Instrument_Control_Core/current_values_all` is now the single visible readout for all slots `1.1 .. 6.3`.
-- `/project1/Instrument_Control_Core/current_values_all` now also includes the current deep summary rows at the top (`focus_group`, `focus_control`, `page_index`, `active_slots`, `deep_valid`, `deep_1..8`) so the base viewer shows both slot memory and the live deep context in one table.
-- `/project1/Instrument_Control_Core/deep_bus` now mirrors the currently focused deep `deep_1..8` payload plus metadata from `fx_subbank_map`, and `/project1/Instrument_Control_Core/deep_state` keeps the matching summarized focus/group/page state inside the central control core.
+- `/project1/Instrument_Control_Core` now also provides three derived reference views from that master table:
+  - `current_values_main`
+  - `current_values_fx_grid`
+  - `current_values_fx_grid_by_control`
+- The core base viewer now points to `current_values_main` as the compact main reference.
+- `/project1/Instrument_Control_Core/current_values_all` now reads its live channel values and live `fx_grid` values directly from `/project1/vcm600/out1` again via raw-name lookup inside `current_values_all_core`.
+- `/project1/Instrument_Control_Core/current_values_all_core` and `deep_write_callbacks` now read focus/deep summary state from `/project1/focus_context` instead of from core-local focus/deep tables.
+- `/project1/Instrument_Control_Core/current_values_all_core` and `deep_write_callbacks` now read selector/focus state through the new local DAT mirrors `selector_state_dat` and `focus_state_dat` instead of only by hard path to the external blocks.
+- `/project1/Instrument_Control_Core/current_values_all_core` no longer rebuilds `current_values_all` on every frame; the old `onFrameEnd` refresh loop has been removed so the table updates only on real triggers.
+- `/project1/Instrument_Control_Core/current_values_views_core` is deduplicated again, and the old extra trigger path `current_values_all_chop_exec` is disabled so the readout no longer refreshes twice.
+- `/project1/Instrument_Control_Core/hybrid_group_fader/hybrid_out` now points to the local live callback DAT again; the stale old `/project1/Group_MIDI_Map/...` callback reference has been removed.
+- Unused generic callback stubs have been removed from the core deep path where they were not actually referenced (`deep_bus_callbacks1`, `fx_subbank_map/mapped_fx_grid_callbacks`).
+- `/project1/Instrument_Control_Core/current_values_all` still includes the `level` row directly under `play`; active slot columns mirror the current group level as a reference until a dedicated slot-memory path exists for volume.
+- `/project1/Instrument_Control_Core/current_values_all` now also includes the current deep summary rows at the top (`focus_channel`, `focus_control`, `page_index`, `active_slots`, `deep_valid`, `deep_1..8`) so the base viewer shows both slot memory and the live deep context in one table.
 - `/project1/Instrument_Control_Core/current_values_all` now labels the raw eight VCM-600 deep faders explicitly as `fx_grid_1 .. fx_grid_8`; those rows now read directly from the raw internal `fx_grid` source instead of from the already gated deep bus.
-- `/project1/Instrument_Control_Core/fx_grid_memory` now stores per-slot `fx_grid_1 .. fx_grid_8` values for all `1.1 .. 6.3` slots, so the last deep-fader state survives selector deactivation.
+- `/project1/focus_context/focus_bus` now mirrors the currently focused deep `deep_1..8` payload plus metadata from `fx_subbank_map`, and `/project1/focus_context/focus_state` keeps the matching summarized focus/group/page state.
+- `/project1/project_memory/fx_grid_memory` now stores per-slot `fx_grid_1 .. fx_grid_8` values for all `1.1 .. 6.3` slots, so the last deep-fader state survives selector deactivation.
 - `/project1/Instrument_Control_Core/fx_grid_hybrid_state` now stores the reusable per-group/per-fader gummiband anchors for `fx_grid_1 .. fx_grid_8`, so the deep grid can use the same elastic multi-slot movement model as `hi_eq .. frequency`.
 - `/project1/channel_selector/event_stream_exec` now snapshots the current `fx_grid` values into that per-slot memory before a selector button deactivates an already active slot.
+- That selector snapshot path now also writes the currently focused `fx_grid` set into `/project1/project_memory/fx_grid_control_memory`, using the current `focus_context` control and the direct `/project1/vcm600/out1` source.
 - `/project1/Instrument_Control_Core/deep_write_callbacks` now also writes the current focused `deep_1 .. deep_8` payload into the matching per-slot `fx_grid_memory` rows for every active target that receives a deep write.
+- `/project1/Instrument_Control_Core/deep_write_callbacks` now also writes those focused `deep_1 .. deep_8` payloads into the matching `fx_grid_control_memory` rows for the active `focus_control`.
 - `/project1/Instrument_Control_Core/current_values_all` now shows live `fx_grid_*` values for active slots in the focused group and falls back to the stored per-slot `fx_grid_memory` values for inactive slots.
-- `/project1/Instrument_Control_Core/fx_grid_router/out1` is now reconnected to the internal `fx_grid_out` stream again, so `fx_grid` reaches `fx_subbank_map`, `deep_bus`, `fx_grid_memory`, and `current_values_all` in real time without requiring a selector re-toggle.
+- `/project1/Instrument_Control_Core/current_values_all` now also includes the per-control `fx_grid` memory rows from `project_memory/fx_grid_control_memory`, exposed as `hi_eq_fx_grid_1 .. frequency_fx_grid_8` in the main reference table.
 - `/project1/Instrument_Control_Core/deep_write_state` now shows the central tdBitwig deep-writer status (`group`, `focus`, `write_status`, `targets_written`, `target_paths`) inside the core.
 - `/project1/Instrument_Control_Core/hybrid_group_fader` now exists as a reusable internal block for relative multi-slot fader movement with synced travel to `0` or `1` at the limits.
 - `/project1/gummiband_master/gummiband_core` now contains the extracted reusable elastic multi-slot movement algorithm; `channel_selector/event_stream_exec` calls that root master for `hi_eq .. frequency`, while state and anchors remain in `Instrument_Control_Core`.
 - `/project1/Instrument_Control_Core/deep_write_callbacks` now applies `gummiband_master` to `fx_grid_1 .. fx_grid_8` before writing to the active `bitwigRemotesTrack{group}_{slot}` targets, so multi-slot deep writes no longer fan out one identical value to every active slot.
+- The `fx_grid` write path now uses one shared fixed remote remap for all tdBitwig targets instead of assuming `deep_1..8 -> Remotecontrol0..7` in straight order; the current shared order is the observed two-row layout `1,5,2,6,3,7,4,8`.
 - `/project1/Instrument_Control_Core/current_values_all` now reads the slot columns of `fx_grid_1 .. fx_grid_8` from `fx_grid_memory`, so the visible deep-grid rows reflect the actual gummiband outputs per slot.
 - `/project1/Instrument_Control_Core/hybrid_fader_state` is restored and currently holds the shared hybrid-fader anchors for all `6 x 8` encoder lanes.
 - The eight encoder-style controls `hi_eq`, `mid_eq`, `low_eq`, `pan`, `send_a`, `send_b`, `resonance`, and `frequency` now use a shared elastic hybrid-fader model across all groups `1..6` and their subslots `.1/.2/.3`.
@@ -120,6 +209,7 @@
 - The current hybrid slowdown model keeps all active slots above `0`/below `1` until the physical VCM-600 control itself reaches the boundary; on the remaining hardware travel the slots approach the edge with a shaped slowdown instead of letting the first slot hit the boundary early.
 - `/project1/Group_MIDI_Map` has been renamed live to `/project1/Instrument_Control_Core`, and the active callbacks now read the new core path without TD errors.
 - The grouped `bitwigRemotesTrackx_y` tdBitwig targets are currently not a verified fixed-slot addressing layer: their visible `Track` parameter does not reliably retarget the underlying pinned Bitwig cursor, so the current grouped deep fan-out should be treated as experimental until a clean target model is rebuilt.
+- The fresh root `bitwigRemotesTrack1_1 .. 6_3` instances now keep their intended visible `Track` names again, but tdBitwig listener rebuilds remain fragile: manual UI reconnect is currently more reliable than script-driven `Connect`/listener resets.
 - `vcm600_callbacks` writes normalized input into the visible device tables and live downstream paths without the removed root eventbus.
 - The last dead group-volume callback code was removed from `vcm600_callbacks`, so the device input path no longer carries guards for deleted `/project1/state` and `/project1/outputs` nodes.
 - `/project1/Midi_Bitwig_Ch1` to `/project1/Midi_Bitwig_Ch6` again contain local `eventbus` / `eventbus_core` nodes so each output block can show the outgoing MIDI events in readable table form.
@@ -135,8 +225,12 @@
 - Live-test the fixed group outputs `11..16` from real VCM-600 controls and confirm that active subtracks mirror correctly.
 - Live-test the centralized slot memory and pickup behavior from real VCM-600 input and confirm that the first movement after slot activation no longer causes unwanted jumps.
 - Rebuild the deep tdBitwig target side around a verified fixed-slot strategy; the current grouped `bitwigRemotesTrackx_y` layer is wired but not trustworthy as a stable `x.y` destination map.
+- When `bitwigRemotesTrackx_y` mirror the wrong track or parameter after listener trouble, prefer a manual reconnect in the TouchDesigner UI before any scripted reconnect attempt.
 - Possible structural improvement for later: reorganize the root Bitwig target side again into clearer grouped channel blocks if needed, now that the old `CH_x_Deep` / `CH_x_Instruments` runtime presentation has been removed.
 - Possible implementation improvement for later: build repeated per-channel logic as one parameterized reusable block (for example `Group=1..6`) instead of maintaining six diverging copies for each channel row.
 
 ## Next Step
-- Live-test the repaired centralized deep path: set a focus in the desired group, move `fx_grid`, confirm `Instrument_Control_Core/current_values_all` updates `fx_grid_1 .. fx_grid_8`, and verify that `Instrument_Control_Core/deep_write_state` and the expected `bitwigRemotesTrack{group}_{slot}` targets follow.
+- Live-test the rebuilt minimal selector path from real VCM-600 button events: confirm `cf_asn`, `clip`, and `track` toggle `track_x.y` immediately through `channel_selector/out1` without dragging normal channel controls.
+- Next architecture step after the current live repair: build a new verified tdBitwig listener test matrix for slots `1.1 .. 2.3` with separate fixed `main`, `fx_grid`, and `fx_button` bundles before scaling toward the planned `48`-slot model.
+- The first live scaffold of that test matrix now exists under `/project1/bitwig_listener_test`; the next live step is to replace the six placeholder bundle nodes with real tdBitwig listener bundles and verify readback/write per slot.
+- Next device-side integration step later: rewire downstream blocks that still assume a broad VCM-600 state feed so they consume the new explicit event output from `/project1/vcm600/out1` or a later dedicated root state block instead.

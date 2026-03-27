@@ -48,6 +48,8 @@ Active devices now live directly on `/project1` and should stay grouped as one v
 - Before modifying TouchDesigner logic, inspect the relevant COMP/DAT structure first.
 - Use logical layout and grouping in the TouchDesigner network.
 - Avoid hiding device-specific mapping corrections in callback hacks when tables can hold the verified values directly.
+- Avoid project "special-case sprawl": prefer fixing the underlying system over adding one-off workaround paths or long-lived temporary helper logic.
+- If a clean fix requires a broader structural or architectural change across multiple blocks, ask before making that change.
 
 ## Documentation Rules
 - `PROJECT_STATE.md` should stay short and operational.
