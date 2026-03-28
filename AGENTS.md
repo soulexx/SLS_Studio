@@ -1,82 +1,95 @@
-# SLS Studio Project Rules
+# SLS Studio — Project Rules
 
 ## Purpose
-This project contains the TouchDesigner setup and related project files for SLS Studio.
-
-The goal of this file is to provide stable instructions that should apply in every new chat for this project.
+TouchDesigner ↔ Bitwig Studio ↔ VCM-600 controller integration.
+Data-driven, single-source-of-truth routing architecture.
 
 ## Startup Routine
-At the beginning of every new chat in this project:
-
-1. Read `AGENTS.md`.
+At the beginning of every new session:
+1. Read `AGENTS.md` (this file).
 2. Read `PROJECT_STATE.md`.
-3. Inspect the relevant project area before proposing changes.
-4. Prefer updating project documentation when the current state changes.
+3. Inspect the live `.toe` via MCP before proposing changes — the `.toe` is the source of truth.
+4. Update `PROJECT_STATE.md` when meaningful state changes.
 
 ## Source Of Truth
-- Stable project rules live in `AGENTS.md`.
-- Current working context lives in `PROJECT_STATE.md`.
-- Human-readable change history lives in `WORKLOG.md`.
-- Technical file history should live in Git commits and GitHub.
+- **`.toe` file** = primary truth for all node structure, logic, and state.
+- **`AGENTS.md`** = stable project rules (this file).
+- **`PROJECT_STATE.md`** = current working context, test status, open items.
+- **Git commits** = change history.
 
 ## Project Structure
-- `_Touchdesigner/` contains the TouchDesigner-related project assets and support files.
-- TouchDesigner runtime project currently centers around `/project1`.
-- Known main areas inside `/project1`:
-  - `bitwig`
-  - `devices`
-  - `mcp_webserver_base`
-- Device-specific mapping conventions live in `_Touchdesigner/devices/DEVICE_RULES.md`.
-- Bitwig-specific conventions live in `_Touchdesigner/bitwig/BITWIG_RULES.md`.
+- `_Touchdesigner/` — all TouchDesigner assets.
+- Active `.toe`: `SLS_Studio_1.2.17.toe` (TD auto-backup: `SLS_Studio_1.2.toe`, ignore for git).
+- TouchDesigner runtime: `/project1` (flat structure, 126 direct children).
+
+### Node Naming Convention
+All nodes in `/project1` follow a prefix convention:
+
+| Prefix | Role | Examples |
+|--------|------|---------|
+| `logic__` | Processing / computation | `logic__control_resolver`, `logic__event_normalizer` |
+| `state__` | Live state tables | `state__resolved_targets`, `state__selection_effective` |
+| `maps__` | Static lookup tables | `maps__bitwig_remote`, `maps__led_slots` |
+| `out__` | Output routers | `out__bitwig_router`, `out__led_router` |
+| `debug__` | Debug visibility | `debug__event`, `debug__perf` |
+| `docs__` | In-TD documentation | `docs__system_map`, `docs__runbook` |
+| `ops__` | Operations / health | `ops__health`, `ops__feature_flags` |
+| `test__` | Test infrastructure | `test__cases`, `test__runner`, `test__results` |
+| `exec__` | DAT executors | `exec__selection_effective_refresh` |
+| `run__` | Manual triggers | `run__tests` |
+
+### Device Containers (baseCOMP)
+- `vcm600` — VCM-600 MIDI device (input + LED output)
+- `cntrlr` — CNTRLR device
+- `midicon` — Midicon device
+- `midicraft` — Midicraft device
+- `vcm600_ui` — VCM-600 on-screen UI
+- `logic__channel_selector` — Channel/slot selection state machine
+- `logic__gummiband` — Gummiband multi-slot logic
+- `out__vcm600_leds` — VCM-600 LED MIDI output
+
+### Bitwig Nodes
+- `bitwigMain` — main Bitwig connection
+- `bitwigTrack1–6`, `bitwigTrackMaster` — 7 track nodes
+- `bitwigClipSlot{1-6}_{1-3}` — 18 clip slot nodes (6 tracks × 3 scenes)
+- `bitwigRemotesTrack1–6` + sub-tracks — remote control nodes
+
+## Pipeline (Data Flow)
+```
+VCM-600 MIDI
+  → logic__control_exec          (pipeline entry)
+  → logic__event_normalizer      (topic+value → event{})
+  → logic__domain_updater        (state writes + gummiband)
+  → logic__control_resolver      (event → raw targets)
+  → state__resolved_targets_raw
+  → logic__priority_resolver     (dedup + priority)
+  → state__resolved_targets
+  → out__bitwig_router           (writes Bitwig parameters)
+  → out__led_router              (sends LED MIDI to VCM-600)
+  → out__view_router             (updates selection readout)
+  → out__debug_router            (writes debug__action_log)
+```
+
+### Selection State (C0.4)
+```
+state__selection_base  (stable base)  ┐
+state__selection_temp  (hold/loop)    ├→ logic__selection_effective_merge
+state__modifier        (modifier)     ┘        → state__selection_effective
+```
+`state__selection_effective` is the single source of truth for active slot selection.
 
 ## Working Rules
-- Keep documentation concise and current.
-- Do not replace durable rules in this file with temporary session notes.
-- Put temporary progress, current focus, and next actions in `PROJECT_STATE.md`.
-- Add short dated entries to `WORKLOG.md` for meaningful changes or milestones.
-- When uncertain about intent or architecture, ask before making irreversible structural changes.
-- Prefer incremental edits over broad refactors.
-- Before modifying TouchDesigner logic, inspect the relevant COMP/DAT/CHOP/TOP structure first.
-- When adding project support nodes in TouchDesigner, use a logical layout and grouping instead of leaving nodes loose in the root.
+- Always read the relevant nodes via MCP before proposing changes.
+- Do not invent node names — verify they exist in the `.toe`.
+- Prefer incremental changes over broad refactors.
+- Run `test__runner` after any logic change and verify `test__results`.
+- Keep `PROJECT_STATE.md` current when test count or architecture changes.
+- `docs__system_map` inside TD is the authoritative node registry — update it when nodes are added/removed.
 
-## Documentation Rules
-- `PROJECT_STATE.md` should stay short and operational.
-- `WORKLOG.md` should contain brief chronological notes, not long narratives.
-- Record verified system status when it materially changes.
-- Record open issues and next steps explicitly.
-- Documentation and rules files in the DEV workspace should always be represented inside TouchDesigner as synced `textDAT` nodes.
-- Project documentation and rules that should be visible in TouchDesigner must live under logical TouchDesigner areas as file-synced `textDAT`s.
-- Mirrored documentation nodes should be grouped in a dedicated logical area, not scattered across `/project1`.
-- When relevant project parts are added, removed, replaced, or significantly reorganized, ask whether `PROJECT_STATE.md` and `WORKLOG.md` should be updated.
-- When the active focus changes, ask whether `PROJECT_STATE.md` should be updated.
-- When durable project rules change, update `AGENTS.md`.
-
-## TouchDesigner Notes
-- Check for TouchDesigner errors and warnings when validating the project state.
-- When reviewing device logic, inspect mappings, callbacks, lookup tables, and active MIDI I/O nodes.
-- Treat external files referenced by DATs as part of the project context.
-- Keep important DEV documentation mirrored in TouchDesigner so project context is available from both the filesystem and the TD network.
-- When working in `devices`, read `_Touchdesigner/devices/DEVICE_RULES.md` as the authoritative device-mapping reference.
-- When working in `bitwig`, read `_Touchdesigner/bitwig/BITWIG_RULES.md` as the authoritative Bitwig integration reference.
-- Prefer clear spatial organization in the TouchDesigner network:
-  - group related nodes inside a dedicated COMP when appropriate
-  - keep root-level layout readable
-  - place documentation, support, and runtime areas in clearly separated regions
-- Rules `textDAT` nodes should appear at the beginning of a logical TouchDesigner area so they are immediately visible.
-- For TouchDesigner node layout, sort related blocks in this order when possible:
-  - Rules
-  - I/O
-  - Verarbeitung
-  - Bus
-  - Debug
-  - Tests
-
-## Change Tracking
-- Use Git for real version history.
-- Prefer small, focused commits with clear messages.
-- Use GitHub as the remote backup and collaboration history.
-
-## Default Assistant Behavior
-- Be concise and practical.
-- Explain assumptions when they matter.
-- If the requested change affects project conventions, update documentation too.
+## Recovery Commands (in TD Python console)
+```python
+op('/project1/ops__recovery').module.check_health()
+op('/project1/ops__recovery').module.rebuild_map_cache()
+op('/project1/ops__recovery').module.full_restart()
+op('/project1/test__runner').module.run_all()
+```

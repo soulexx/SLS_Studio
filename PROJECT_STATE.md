@@ -1,57 +1,62 @@
 # Project State
 
-## Current Focus
-Use the established project workflow while keeping documentation, TouchDesigner mirrors, and Git history current.
-Migrate channel interaction toward a stable hybrid model with explicit shared state and output consumers.
+## Current Status
+Architecture refactoring Phases 1–6 + C0 (Channel Selector) complete.
+Software DoD: **42/42 tests PASS** ✅
 
-## Last Position
-- TouchDesigner project at `/project1` was inspected.
-- Main areas found: `bitwig`, `devices`, `mcp_webserver_base`.
-- No TouchDesigner errors or warnings were found during the last health check.
-- Project documentation is mirrored in TouchDesigner under `/project1/project_docs`.
-- Git repository initialized and connected to GitHub.
-- Device network layout was normalized for `vcm600`, `cntrlr`, `midicon`, and `midicraft`.
-- Device mapping conventions are now maintained in `_Touchdesigner/devices/DEVICE_RULES.md` and mirrored in TouchDesigner as `/project1/devices/device_rules`.
-- Rule text blocks are positioned at the beginning of their logical TouchDesigner areas.
-- TouchDesigner and Bitwig are both running locally with `9099` and `8088` open as documented.
-- Existing channel-selection logic still uses selector-era toggle state and is ready for migration to hybrid `channel_state`.
-- VCM-600 production LED output is now separated from the debug test API.
-- The shared channel state now includes exact slot focus for `track_1.1` to `track_6.3`, and Bitwig follows that slot.
-- Channel-selection outputs now react to state DAT changes instead of polling each frame.
+## Active .toe
+`_Touchdesigner/SLS_Studio_1.2.17.toe`
+(TD auto-backup `SLS_Studio_1.2.toe` is ignored for git purposes)
 
-## Open Tasks
-- Document device-specific logic as work continues.
-- Decide on the preferred day-to-day commit cadence and branch routine.
-- Continue documenting device-specific logic as work progresses.
-- Apply the same layout discipline to future device or support areas when they are changed.
-- Finish migrating channel selection toward `focused_channel` plus explicit enabled flags.
-- Decide whether channel-enabled toggles should remain tied to slot presses or become a separate interaction.
-- Restore the VCM-600 MIDI output binding so live LED sends work without the current MIDI interface warning.
+## Test Coverage
 
-## Next Step
-Continue with actual project work, complete the channel-state migration, and keep `PROJECT_STATE.md` / `WORKLOG.md` updated when relevant parts are added, removed, replaced, or reorganized.
+| Phase | Tests | Topic |
+|-------|-------|-------|
+| Phase 1–6 | T01–T12 | Basic routing: EQ, level, send, pan, master |
+| Gummiband | T13a–T13b | Multi-slot interpolation |
+| Modifier | T14a–T14b | scene_push modifier state |
+| FX Contextual | T15–T19 | Slot-aware fx_grid routing + parity |
+| Modifier Super Mode | T20–T23b | Modifier overrides slot context |
+| Hold/Temp Selection | T24–T27 | Effective = base ∪ temp, modifier override |
+| Broadcast Mode | T28–T32 | Multi-target broadcast routing |
+| Hold-Window Logic | T33–T38 | note-on/off + hold window edge cases |
+| LED Visual | L01 | LED sequencer visual test |
 
-## Known Rules
-- Stable rules belong in `AGENTS.md`.
-- Current context belongs in `PROJECT_STATE.md`.
-- Short chronological notes belong in `WORKLOG.md`.
-- Important DEV documentation should also exist in TouchDesigner as synced `textDAT` nodes under `/project1`.
-- DEV documentation and rules files should always be mirrored in TouchDesigner as synced `textDAT` nodes.
-- Support/documentation nodes in TouchDesigner should be arranged in a logical grouped layout.
-- Relevant project changes should trigger a check whether `PROJECT_STATE.md` and `WORKLOG.md` need updating.
-- Device areas in TouchDesigner should be laid out in this order when possible: `I/O -> Verarbeitung -> Bus -> Debug -> Tests`.
-- TouchDesigner layout order should start with `Rules` when a rules `textDAT` exists for that area.
-- `_Touchdesigner/devices/DEVICE_RULES.md` is the authoritative source for device-mapping conventions.
+**Total: 42 test cases** in `test__cases`, run via `test__runner`.
+
+## Architecture Summary
+
+**Maps (static data):**
+`maps__bitwig_remote`, `maps__bitwig_send`, `maps__bitwig_paths`, `maps__bitwig_special`, `maps__led_slots`, `maps__selector`
+
+**Logic (processing):**
+`logic__control_exec` → `logic__event_normalizer` → `logic__domain_updater` → `logic__control_resolver` → `logic__priority_resolver` → `logic__selection_effective_merge`
+
+**State (live tables):**
+`state__resolved_targets_raw`, `state__resolved_targets`, `state__selection_base`, `state__selection_temp`, `state__selection_effective`, `state__current_values`, `state__value_memory`, `state__modifier`
+
+**Outputs:**
+`out__bitwig_router`, `out__led_router`, `out__view_router`, `out__debug_router`, `out__vcm600_leds`
+
+**Removed (legacy):**
+- `group_level_bridge` — soft_removed (onFrameEnd disabled, still in system_map as legacy_active)
+- `Midi_Bitwig_Ch1-6` — removed in Phase-6-Cleanup
+- `state__focus`, `in__vcm600` — removed in Phase E
+
+## Pending — Hardware Required (VCM-600 must be connected)
+1. Level-Fader bewegen → verify `bitwigTrack.Volume` responds via new router (without `group_level_bridge`)
+   → if OK: permanently delete `group_level_bridge` node + mark `removed` in `docs__system_map`
+2. Gummiband multi-slot live test → T13 hardware verify
+3. Shift/Modifier press → Session-Clear korrekt
+4. Fast fader movement → no frame drops, `debug__perf` stable
+
+## After Hardware Tests
+- Remove `group_level_bridge` permanently from `.toe`
+- Create GitHub PR via web UI (gh CLI not in PATH)
 
 ## Last Verified
-- Date: 2026-03-15
-- TouchDesigner MCP reachable
-- `/project1` structure inspected
-- No TD errors or warnings detected
-- `/project1/project_docs` created with synced documentation DATs
-- Git initialized in project root
-- GitHub remote connected and initial push completed
-- `vcm600`, `cntrlr`, `midicon`, and `midicraft` reordered to the standard device layout
-- `DEVICE_RULES.md` is synced into TouchDesigner at `/project1/devices/device_rules`
-- `bitwig_rules` and `device_rules` are positioned at the beginning of their respective TouchDesigner areas
-- TouchDesigner and Bitwig are both running with the documented OSC ports open
+- Date: 2026-03-28
+- TD MCP reachable, `SLS_Studio_1.2.17.toe` active
+- 42 test cases confirmed in `test__cases`
+- `docs__system_map` and `docs__runbook` current in TD
+- Git branch: `main`

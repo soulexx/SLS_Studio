@@ -1,9 +1,0 @@
-field	value
-focus_group	2
-focus_valid	1
-focus_control	send_b
-bank_id	6
-page_index	5
-active_slots	1,2,3
-any_slot_active	1
-last_write	core_bus

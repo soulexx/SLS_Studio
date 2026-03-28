@@ -15,7 +15,11 @@ __pycache__/
 *.bak
 _Touchdesigner/Backup/
 _Touchdesigner/Information/
-_Touchdesigner/SLS_Studio.[0-9]*.toe
+# All .toe files ignored — only the active version is explicitly tracked
+_Touchdesigner/*.toe
+!_Touchdesigner/SLS_Studio_1.2.17.toe
+# Zip archives
+_Touchdesigner_*.zip
 
 # TouchDesigner MCP debug/temp dumps
 _Touchdesigner/_tmp_*
@@ -55,6 +59,9 @@ _Touchdesigner/_state_*
 _Touchdesigner/*_selector_dump.txt
 _Touchdesigner/*_live_dump.txt
 _Touchdesigner/*.tsv
+
+# Root temp files (MCP session dumps)
+_tmp_*.txt
 
 # Local environment noise
 .env

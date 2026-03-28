@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls C:UsersOliverOneDrive_DEVSLS_Studio_Touchdesigner *.md)"
+    ]
+  }
+}
